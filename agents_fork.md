@@ -22,6 +22,19 @@ Decisiones ya fijadas (Q&A previo):
 - **Ya existe clave GPG** para firmar el repo de paquetes (y para git).
 - Modelo de repos en máquinas: **sombreado parcial** — `[omarchy-personal]` (solo el par `omarchy` + `omarchy-settings` + extras personales) listado ANTES del `[omarchy]` oficial en `/etc/pacman.conf`. El mirror oficial `pkgs.omarchy.org` sigue proveyendo el resto del ecosistema (~todos los demás paquetes). No se rehostea todo.
 
+### 0.1 Estado actual del proyecto (2026-08-30) — la bitácora con el paso a paso está en `WORKLOG.md`
+
+- Forks: `robert-flo/omarchy` (sí, rama `personal` sobre `upstream/quattro`, commit `89759761`);
+  `robert-flo/omarchy-pkgs` **NO hecho aún** — solo clone de upstream en `~/Work/omarchy/omarchy-pkgs` (para el dev loop).
+- Layout dev (defaults del tool; razón en WORKLOG, "Decisiones registradas"): `~/Work/omarchy/omarchy-installer` (fork), `~/Work/omarchy/omarchy-pkgs` (upstream).
+- Machine dev: `omarchy-dev` + `omarchy-settings-dev` `dev.89759761-1` (reemplazaron al stock; máquina en línea dev).
+- POC webapp: **Xataka** (`applications/Xataka.desktop` + `applications/icons/Xataka.png`) en `personal`;
+  materializado con `omarchy-refresh-applications`; ventana Chrome modo app abierta y verificada
+  (`chrome-www.xataka.com__-Default`). El patrón queda demostrado para iterar las ~55 webapps del dueño.
+- Decisiones de este hito que matizan el plan: ver "Decisiones registradas" en WORKLOG (ruta default del tool,
+  POC Xataka, repo de notas público con nombre neutro, `pkexec` sin TTY, `--ask 4` en `pacman -U`).
+- Repositorios de notas: working copy canónico `~/Work/omarchy/scratchpad`.
+
 ## 1. Modelo mental de Omarchy upstream (hechos que un agente debe saber)
 
 Estos hechos fueron verificados leyendo el código; no dan lugar a interpretación.

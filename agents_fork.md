@@ -35,6 +35,41 @@ Decisiones ya fijadas (Q&A previo):
   POC Xataka, repo de notas público con nombre neutro, `pkexec` sin TTY, `--ask 4` en `pacman -U`).
 - Repositorios de notas: working copy canónico `~/Work/omarchy/scratchpad`.
 
+### 0.2 Próximos pasos (orden de ejecución, estado 2026-08-30)
+
+Este es el único criterio de avance; ejecutar en orden, un paso a la vez. Cada paso referencia
+su receta en el plan (las "W#" y los apartados citados). Tras cada paso, actualizar `WORKLOG.md`
+y este bloque de estado antes de continuar.
+
+1. **Forkear `omacom/omarchy-pkgs` → `robert-flo/omarchy-pkgs`** (rama `master`), con
+   `git remote add upstream git@github.com:omacom/omarchy-pkgs.git` en el checkout local
+   (Etapa 0 — último ítem pendiente del bootstrap).
+2. **Puntar el dev loop al fork**: en `~/Work/omarchy/omarchy-pkgs`, el `origin` pasa a ser el
+   fork; `OMARCHY_UPSTREAM_URL` se apunta a `https://github.com/robert-flo/omarchy.git`.
+   Validar que `omarchy dev pkg-test` (los dos paquetes) compila e instala desde el fork.
+3. **Etapa 3 / W7 — entregable `omarchy-personal-repo`**:
+   - Crear repo `<user>/omarchy-personal-repo`, branch `gh-pages`, hosting Pages desde ese branch.
+   - Escribir `.github/workflows/release-personal.yml` (receta completa en W7): checkout de los 3
+     repos → pin del par (`omarchy-pkgs release --no-push`, `OMARCHY_UPSTREAM_URL` al fork) →
+     `bin/repo build/sign/promote-build/update-repo --mirror stable` → convertir los symlinks de la
+     db en copias y firmarlos → push a `gh-pages`.
+   - Replicar los 4 workflows de upstream: `test.yml` activo; `sync-aur.yml` / `sync-upstream.yml`
+     / `sync-rebuilds.yml` inertes (solo el par, sin AUR/upstream extra). §1.8.
+   - Único cambio permitido a `bin/`/`build/`: en `build/Dockerfile`, **no eliminar** la entrada
+     `[omarchy] Server = https://pkgs.omarchy.org/stable/$arch` cuando `MIRROR=stable` (necesaria
+     para resolver depends del par contra el repositorio oficial). W7 paso 3.
+   - Secrets de la repo: `GPG_PRIVATE_KEY`, `GPG_PASSPHRASE`.
+4. **Etapa 4 — sombreado parcial**: en el fork de `omarchy` (rama `personal`), agregar
+   `[omarchy-personal]` **antes** de `[omarchy]` en `default/pacman/pacman-stable.conf` (§5.4);
+   publicar el par con la regla de versión de §5.3 (pkgrel base 99, incremento por republicanación).
+   Commit `personal: ...` y pull request planificado de vuelta a `quattro`.
+5. **Prueba end-to-end**: reinstalar el par `omarchy` / `omarchy-settings` stock en la máquina dev,
+   correr `omarchy update` y verificar que el par se toma de `[omarchy-personal]` (nuestro fork) y el
+   resto del ecosistema de upstream. Criterio de éxito: `omarchy update` normal, sin pasos extra,
+   deja las ~55 webapps y la personalización del fork instaladas.
+6. **Después del hito**: iterar las ~55 webapps del dueño (patrón de `webapp-workflow.md`); onboarding
+   de máquinas reales (Etapa 5); cadencia de sync con upstream (Etapa 6) cuando haya máquinas en uso.
+
 ## 1. Modelo mental de Omarchy upstream (hechos que un agente debe saber)
 
 Estos hechos fueron verificados leyendo el código; no dan lugar a interpretación.

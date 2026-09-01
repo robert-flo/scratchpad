@@ -112,3 +112,55 @@ pkexec pacman -U --ask 4 --noconfirm --overwrite='*' <settings.zst> <engine.zst>
 # materializar + lanzar
 omarchy-refresh-applications && omarchy-launch-webapp https://www.xataka.com/
 ```
+
+---
+
+## Sesión 2026-09-01 — Fork de omarchy-pkgs + bootstrap reproducible (Etapa 0 completa)
+
+### Contexto
+Bootstrap del layout dev en una **máquina nueva** (sin `~/Work/omarchy`): la máquina de la
+sesión 2026-08-30 queda como dev/POC; esta replica el entorno y, de paso, cierra el último
+ítem pendiente de la Etapa 0: el fork de `omarchy-pkgs`.
+
+### Qué se hizo (orden real)
+
+1. **Script `bootstrap-omarchy-dev.sh`** (commiteado en este repo): clona los 3 repos
+   (`omarchy-installer` rama `personal`, `omarchy-pkgs` rama `master`, `scratchpad`) en
+   `~/Work/omarchy/`, agrega el remote `upstream` a ambos forks y hace fetch. Idempotente
+   (salta lo ya clonado). Razones de rutas/nombres documentadas en comentarios dentro del
+   script (defaults de `bin/omarchy-dev-pkg-test`; convención `omarchy-installer` de §0.1).
+2. **Primera corrida**: `omarchy-installer` y `scratchpad` clonados OK; `omarchy-pkgs`
+   falló con `Repository not found` — el fork **no existía** (era el paso 1 de §0.2 del plan).
+3. **Fork creado**: `gh repo fork omacom/omarchy-pkgs --clone=false` →
+   `https://github.com/robert-flo/omarchy-pkgs`. Clone a `~/Work/omarchy/omarchy-pkgs`
+   (rama `master`) + `git remote add upstream` + fetch. **Etapa 0 completa.**
+4. Dato de entorno: upstream publicó tag **`v4.0.2`** (visible en el fetch); la rama
+   `personal` sigue basada en `89759761` (base quattro al momento del POC). A considerar
+   en la próxima cadencia de sync (W9).
+
+### Decisiones registradas (con razón)
+
+| Decisión | Razón |
+|---|---|
+| Bootstrap como script commiteado en scratchpad | Reproducir el layout en cualquier máquina nueva sin recordar los pasos; las razones de cada paso viven como comentarios en el script, no en la memoria del agente |
+| Clone por SSH (`git@github.com:`) en el script | Mismo esquema de URLs que usa el plan (§0.2, W9); `gh` de esta máquina ya tiene rewrite https→ssh |
+| Fork de pkgs creado vía `gh repo fork` (no a mano) | Mismo mecanismo que el fork de `omarchy` en la sesión 2026-08-30 |
+
+### Estado actual (inventario)
+
+- Repos: forks `robert-flo/omarchy` (`quattro` + `personal` @ `89759761`) y
+  **`robert-flo/omarchy-pkgs` (`master`) — ya existe**; `robert-flo/scratchpad` (notas).
+- Checkout dev (esta máquina): `~/Work/omarchy/{omarchy-installer,omarchy-pkgs,scratchpad}`,
+  ambos forks con `origin` (fork) + `upstream` (omacom).
+- Máquina dev (sesión 08-30): `omarchy-dev` + `omarchy-settings-dev` `dev.89759761-1`, POC Xataka OK.
+- **Esta máquina aún NO tiene el par dev instalado** — el ciclo dev (`omarchy dev pkg-test`)
+  no se corrió acá; es el criterio de aceptación de Etapa 0 pendiente localmente.
+
+### Lo que falta (próximos pasos)
+
+1. Validar el ciclo dev en esta máquina: `omarchy dev pkg-test` → `pacman -Q omarchy-dev
+   omarchy-settings-dev` reporta `dev.<sha>` (criterio de aceptación Etapa 0).
+2. Paso §0.2.2: puntar el dev loop al fork (`origin` del pkgs ya es el fork;
+   `OMARCHY_UPSTREAM_URL=https://github.com/robert-flo/omarchy.git` para el pin).
+3. Etapa 3 / W7: repo `omarchy-personal-repo` + Action de release (ver §0.2 del plan).
+4. Cadencia W9: rebase de `personal` sobre `upstream/quattro` (hay tag `v4.0.2` nuevo).

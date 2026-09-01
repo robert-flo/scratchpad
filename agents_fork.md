@@ -22,30 +22,37 @@ Decisiones ya fijadas (Q&A previo):
 - **Ya existe clave GPG** para firmar el repo de paquetes (y para git).
 - Modelo de repos en máquinas: **sombreado parcial** — `[omarchy-personal]` (solo el par `omarchy` + `omarchy-settings` + extras personales) listado ANTES del `[omarchy]` oficial en `/etc/pacman.conf`. El mirror oficial `pkgs.omarchy.org` sigue proveyendo el resto del ecosistema (~todos los demás paquetes). No se rehostea todo.
 
-### 0.1 Estado actual del proyecto (2026-08-30) — la bitácora con el paso a paso está en `WORKLOG.md`
+### 0.1 Estado actual del proyecto (2026-09-01) — la bitácora con el paso a paso está en `WORKLOG.md`
 
-- Forks: `robert-flo/omarchy` (sí, rama `personal` sobre `upstream/quattro`, commit `89759761`);
-  `robert-flo/omarchy-pkgs` **NO hecho aún** — solo clone de upstream en `~/Work/omarchy/omarchy-pkgs` (para el dev loop).
-- Layout dev (defaults del tool; razón en WORKLOG, "Decisiones registradas"): `~/Work/omarchy/omarchy-installer` (fork), `~/Work/omarchy/omarchy-pkgs` (upstream).
-- Machine dev: `omarchy-dev` + `omarchy-settings-dev` `dev.89759761-1` (reemplazaron al stock; máquina en línea dev).
+- Forks: `robert-flo/omarchy` (rama `personal` sobre `upstream/quattro`, commit `89759761`) y
+  **`robert-flo/omarchy-pkgs` (rama `master`) — Etapa 0 completa**.
+- Layout dev (defaults del tool; razón en WORKLOG, "Decisiones registradas"): `~/Work/omarchy/omarchy-installer` (fork),
+  `~/Work/omarchy/omarchy-pkgs` (fork), ambos con `origin` (fork) + `upstream` (omacom).
+  Bootstrap reproducible en máquina nueva: `bootstrap-omarchy-dev.sh` (este repo).
+- Machine dev (sesión 08-30): `omarchy-dev` + `omarchy-settings-dev` `dev.89759761-1` (reemplazaron al stock; máquina en línea dev).
+  La máquina del bootstrap 2026-09-01 todavía NO tiene el par dev instalado (validar `omarchy dev pkg-test` localmente).
 - POC webapp: **Xataka** (`applications/Xataka.desktop` + `applications/icons/Xataka.png`) en `personal`;
   materializado con `omarchy-refresh-applications`; ventana Chrome modo app abierta y verificada
   (`chrome-www.xataka.com__-Default`). El patrón queda demostrado para iterar las ~55 webapps del dueño.
-- Decisiones de este hito que matizan el plan: ver "Decisiones registradas" en WORKLOG (ruta default del tool,
-  POC Xataka, repo de notas público con nombre neutro, `pkexec` sin TTY, `--ask 4` en `pacman -U`).
-- Repositorios de notas: working copy canónico `~/Work/omarchy/scratchpad`.
+- Upstream publicó tag `v4.0.2` (visto en el fetch del 2026-09-01); `personal` sigue en base `89759761` — entrar en la próxima cadencia W9.
+- Decisiones de los hitos que matizan el plan: ver "Decisiones registradas" en WORKLOG (ruta default del tool,
+  POC Xataka, repo de notas público con nombre neutro, `pkexec` sin TTY, `--ask 4` en `pacman -U`,
+  bootstrap como script commiteado).
+- Repositorios de notas: working copy canónica `~/Work/omarchy/scratchpad`.
 
-### 0.2 Próximos pasos (orden de ejecución, estado 2026-08-30)
+### 0.2 Próximos pasos (orden de ejecución, estado 2026-09-01)
 
 Este es el único criterio de avance; ejecutar en orden, un paso a la vez. Cada paso referencia
 su receta en el plan (las "W#" y los apartados citados). Tras cada paso, actualizar `WORKLOG.md`
 y este bloque de estado antes de continuar.
 
-1. **Forkear `omacom/omarchy-pkgs` → `robert-flo/omarchy-pkgs`** (rama `master`), con
-   `git remote add upstream git@github.com:omacom/omarchy-pkgs.git` en el checkout local
-   (Etapa 0 — último ítem pendiente del bootstrap).
-2. **Puntar el dev loop al fork**: en `~/Work/omarchy/omarchy-pkgs`, el `origin` pasa a ser el
-   fork; `OMARCHY_UPSTREAM_URL` se apunta a `https://github.com/robert-flo/omarchy.git`.
+1. ~~**Forkear `omacom/omarchy-pkgs` → `robert-flo/omarchy-pkgs`**~~ **HECHO (2026-09-01)**:
+   fork creado con `gh repo fork`, clone en `~/Work/omarchy/omarchy-pkgs` (rama `master`) con
+   `upstream` configurado. Etapa 0 completa; falta validar `omarchy dev pkg-test` en la
+   máquina nueva del bootstrap (criterio de aceptación local).
+2. **Puntar el dev loop al fork**: en `~/Work/omarchy/omarchy-pkgs` el `origin` YA es el fork
+   (clone directo del fork); falta apuntar `OMARCHY_UPSTREAM_URL` a
+   `https://github.com/robert-flo/omarchy.git`.
    Validar que `omarchy dev pkg-test` (los dos paquetes) compila e instala desde el fork.
 3. **Etapa 3 / W7 — entregable `omarchy-personal-repo`**:
    - Crear repo `<user>/omarchy-personal-repo`, branch `gh-pages`, hosting Pages desde ese branch.
@@ -176,12 +183,12 @@ Estados intermedios hasta el estado final, que es: **en cada máquina, `omarchy 
 
 ### Etapa 0 — Bootstrap del entorno
 
-- [ ] Crear forks en GitHub: `<user>/omarchy` y `<user>/omarchy-pkgs`.
-- [ ] Layout local (usar las rutas por defecto de `omarchy dev pkg-test` para que corra sin argumentos):
+- [x] Crear forks en GitHub: `<user>/omarchy` y `<user>/omarchy-pkgs`.
+- [x] Layout local (usar las rutas por defecto de `omarchy dev pkg-test` para que corra sin argumentos):
   - `~/Work/omarchy/omarchy-installer/` → fork fuente, rama `quattro` base.
   - `~/Work/omarchy/omarchy-pkgs/` → fork de pkgs (los PKGBUILDs solo se tocan para el `source=` al fork y el bump de pin/pkgrel; la maquinaria se mantiene intacta, §1.8).
-- [ ] En el fork fuente: `git remote add upstream git@github.com:omacom/omarchy.git`, y crear la rama personal (`personal`, ver §7.1) arriba de `upstream/quattro`.
-- [ ] En el fork de pkgs: `git remote add upstream git@github.com:omacom/omarchy-pkgs.git`.
+- [x] En el fork fuente: `git remote add upstream git@github.com:omacom/omarchy.git`, y crear la rama personal (`personal`, ver §7.1) arriba de `upstream/quattro`.
+- [x] En el fork de pkgs: `git remote add upstream git@github.com:omacom/omarchy-pkgs.git`.
 - [ ] Verificar el ciclo dev en la máquina de desarrollo: `omarchy dev pkg-test` construye e instala `omarchy-settings-dev` + `omarchy-dev`.
 - **Criterio de aceptación:** `pacman -Q omarchy-dev omarchy-settings-dev` reporta `dev.<sha>`, y la máquina sigue funcional.
 

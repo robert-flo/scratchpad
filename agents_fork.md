@@ -37,12 +37,18 @@ Decisiones ya fijadas (Q&A previo):
   (gh-pages) publica el par `omarchy`/`omarchy-settings` **4.0.2-99** firmado via la Action
   `release-personal.yml` (run verde `33565145113`). Site:
   `https://robert-flo.github.io/omarchy-personal-repo/stable/x86_64`.
+- **Etapa 4 COMPLETA (2026-09-01, 5ª parte)**: `[omarchy-personal]` ANTES de `[omarchy]` en
+  `default/pacman/pacman-stable.conf` del fork fuente (`ebfb3038`); par republicado a
+  **4.0.2-100** (run verde `33571098815`; dos fallos previos por TLS transitorio de
+  archlinux.org). Acción además publica `omarchy-personal.db`(+`.sig`,+`.files`,+`.sig`) porque
+  la db toma el nombre de la sección. Sombreado VERIFICADO con dry-run (`pacman -Su --print`).
 - POC webapp: **Xataka** (`applications/Xataka.desktop` + `applications/icons/Xataka.png`) en `personal`;
   materializado con `omarchy-refresh-applications`; ventana Chrome modo app abierta y verificada
   (`chrome-www.xataka.com__-Default`). El patrón queda demostrado para iterar las ~55 webapps del dueño.
-- Upstream publicó tag `v4.0.2` (visto en el fetch del 2026-09-01); `personal` está en `0e6c11d5`
-  (merge de `omacom:quattro` en `personal`) y el fork **aún no tiene el tag `v4.0.2`** (solo hasta
-  v4.0.1) — entrar en la próxima cadencia W9 (rebase + sync del tag al fork).
+- Upstream publicó tag `v4.0.2` (visto en el fetch del 2026-09-01); `personal` del fork fuente
+  está en `ebfb3038` (merge de `omacom:quattro` `4d687d4d` + Etapa 4) y el fork **aún no tiene
+  el tag `v4.0.2`** (solo hasta v4.0.1) — pendiente en la próxima cadencia W9 (rebase + sync
+  del tag al fork).
 - Decisiones de los hitos que matizan el plan: ver "Decisiones registradas" en WORKLOG (ruta default del tool,
   POC Xataka, repo de notas público con nombre neutro, `pkexec` sin TTY, `--ask 4` en `pacman -U`,
   bootstrap como script commiteado).
@@ -80,16 +86,19 @@ y este bloque de estado antes de continuar.
      no buildan nativo a stable por diseño (`package_builds_for_mirror`); `make_dir_writable`
      añade `chmod -R a+rwX` (runner no-root vs contenedor `builder` uid 1000).
    - Workflows inercia: `test.yml` / `sync-*` de upstream NO replicados (solo el par, sin AUR/upstream).
-4. **Etapa 4 — sombreado parcial**: en el fork de `omarchy` (rama `personal`), agregar
-   `[omarchy-personal]` **antes** de `[omarchy]` en `default/pacman/pacman-stable.conf` (§5.4);
-   publicar el par con la regla de versión de §5.3 (pkgrel base 99, incremento por republicanación).
-   Commit `personal: ...` y pull request planificado de vuelta a `quattro`.
-   Re-publicar: `gh workflow run release-personal.yml -R robert-flo/omarchy-pkgs --ref personal
-   -f version=v4.0.2 -f pkgrel=99`.
+4. ~~**Etapa 4 — sombreado parcial**~~ **HECHO (2026-09-01, 5ª parte)**: `[omarchy-personal]`
+   **antes** de `[omarchy]` en `default/pacman/pacman-stable.conf` (§5.4) en `robert-flo/omarchy`
+   (`ebfb3038`, `personal`); par republicado a **4.0.2-100** vía Action (el paso de publish además
+   publica los aliases `omarchy-personal.db`/`.files` + firmas, porque el nombre de db = nombre de
+   sección). Guard §5.3 y sombreado del par VERIFICADOS con `pacman -Su --print`.
+   Re-publicar tras nuevos cambios: `gh workflow run release-personal.yml
+   -R robert-flo/omarchy-pkgs --ref personal -f version=v4.0.2 -f pkgrel=100`
+   (incrementar pkgrel por cada republicación del mismo pkgver, §5.3).
 5. **Prueba end-to-end**: reinstalar el par `omarchy` / `omarchy-settings` stock en la máquina dev,
    correr `omarchy update` y verificar que el par se toma de `[omarchy-personal]` (nuestro fork) y el
    resto del ecosistema de upstream. Criterio de éxito: `omarchy update` normal, sin pasos extra,
-   deja las ~55 webapps y la personalización del fork instaladas.
+   deja las ~55 webapps y la personalización del fork instaladas. (Requiere confiar la clave personal
+   en el keyring ANTES del refresh, porque `[omarchy-personal]` hereda `SigLevel = Required`.)
 6. **Después del hito**: iterar las ~55 webapps del dueño (patrón de `webapp-workflow.md`); onboarding
    de máquinas reales (Etapa 5); cadencia de sync con upstream (Etapa 6) cuando haya máquinas en uso.
 
@@ -236,10 +245,26 @@ Replica la maquinaria de upstream (bin/repo, §1.8) corriendo entera en una Acti
 
 ### Etapa 4 — Sombreado vía el pacman.conf del fork
 
-- [ ] En el fork fuente, insertar `[omarchy-personal]` **antes** de `[omarchy]` en `default/pacman/pacman-stable.conf` (solo `stable`; decisión tomada).
-- [ ] Publicar el par personal corriendo la Action (receta W7) con la regla de versión de §5.3.
-- [ ] En la máquina de dev: `omarchy refresh pacman` y verificar con `pacman -Syyu --print` que el par se resuelve desde `[omarchy-personal]`.
-- **Criterio de aceptación:** un check dry-run muestra que `omarchy` y `omarchy-settings` "suben" a la versión personal (no a la oficial).
+**Estado: COMPLETA (2026-09-01).** El fork fuente (`robert-flo/omarchy`, rama `personal`,
+`ebfb3038`) inserta `[omarchy-personal]` **antes** de `[omarchy]` en
+`default/pacman/pacman-stable.conf` (solo `stable`; decisión tomada). La sección **no lleva
+`SigLevel` propio**: hereda el global `Required DatabaseOptional` — la db y los paquetes del
+repo personal van firmados con `D5E75EAC51A44715`, así que **la máquina debe confiar esa clave
+en el keyring ANTES de `omarchy refresh pacman`** (`pacman-key --add` + `--lsign-key`, W8 paso 1).
+
+Publicación vía Action (W7) con la regla de §5.3: republicación a pkgrel creciente (`99`→`100`)
+tras el cambio de fuente. Runs: `33570727843`/`33570965650` fallaron por **TLS transitorio de
+archlinux.org** en el bootstrap del Dockerfile (infra, no nuestro código); `33571098815` verde.
+
+**Gotcha de la sección `[omarchy-personal]`:** pacman deriva el nombre del archivo de db de la
+SECCIÓN (`$repo.db`) → necesita `omarchy-personal.db` (+`.sig`, +`.files`, +`.files.sig`);
+`omarchy.db` solo no basta (404 en sync). El paso de publish de la Action ahora publica esos
+aliases (commit `26e524a`, copia en `master` `fe47b16`).
+
+- [x] En el fork fuente, insertar `[omarchy-personal]` **antes** de `[omarchy]` en `default/pacman/pacman-stable.conf` (solo `stable`; decisión tomada).
+- [x] Publicar el par personal corriendo la Action (receta W7) con la regla de versión de §5.3 (`4.0.2-100`).
+- [x] Verificar el sombreado (pseudo-root con las dbs del repo personal + oficial; `pacman -Su --print` con el par stock `4.0.2-1` "instalado"): `omarchy-personal omarchy 4.0.2-100` y `omarchy-personal omarchy-settings 4.0.2-100`; el resto del ecosistema sigue atribuido a `[omarchy]` oficial (omarchy-keyring, limine-hooks, ttf…).
+- **Criterio de aceptación** (COMPLETO): un check dry-run muestra que `omarchy` y `omarchy-settings` "suben" a la versión personal (no a la oficial).
 
 ### Etapa 5 — Onboarding de máquinas
 
@@ -403,8 +428,10 @@ publica a mano.
 7. **Publicar a `gh-pages`** (única desviación operativa, §1.8): resolver symlinks `omarchy.db`
    / `omarchy.files` a copias — **`cp -L "$(dirname "$f")/$(readlink "$f")"`**, no `cp -L` desde
    la raíz (readlink es relativo) — y firmar las copias con la GPG dedicada: `omarchy.db.sig`,
-   `omarchy.files.sig`. `git add -A && git commit -m "publish: <v>"; git push origin gh-pages`
-   (con guard: si no hay cambios, saltar el commit).
+   `omarchy.files.sig`. **Aliases de sección (Etapa 4):** publicar además `omarchy-personal.db`
+   / `.files` (+`.sig`) — pacman deriva el nombre de db de la sección de pacman.conf
+   (`[omarchy-personal]` → `omarchy-personal.db`). `git add -A && git commit -m "publish: <v>";
+   git push origin gh-pages` (con guard: si no hay cambios, saltar el commit).
 8. **Validar** con `curl` a `https://<user>.github.io/omarchy-personal-repo/stable/x86_64/…`.
    **Delta:** derivar el nombre del `.pkg.tar.zst` desde el árbol publicado (`ls repo/stable/
    x86_64/omarchy-*.pkg.tar.zst`), NO desde el input `version` — que lleva `v` (`v4.0.2`) y el

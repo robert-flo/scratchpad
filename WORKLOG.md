@@ -371,3 +371,61 @@ Action `release-personal.yml` que corre en el repo huésped `robert-flo/omarchy-
    al fork y re-pin del release.
 3. Clave pública del repo personal ya guardada en `keys/omarchy-personal-repo.pub.asc` del
    scratchpad (privada NO versionada; solo secret `GPG_PRIVATE_KEY`).
+
+---
+
+## Sesión 2026-09-01 (5ª parte) — Etapa 4 COMPLETA (sombreado `[omarchy-personal]`)
+
+### Qué se hizo
+
+1. **Config del fork fuente** (`robert-flo/omarchy`, rama `personal`): `default/pacman/
+   pacman-stable.conf` inserta `[omarchy-personal]` ANTES de `[omarchy]` con
+   `Server = https://robert-flo.github.io/omarchy-personal-repo/stable/x86_64`. La sección NO
+   lleva `SigLevel` propio → hereda `Required DatabaseOptional` (política alineada con la
+   migración upstream que elimina `Optional TrustAll`). Commit `ebfb3038`.
+   - Nota: el remote `personal` ya tenía un merge del dueño de `omacom:quattro` (`4d687d4d`,
+     con todo el hermes de upstream); se rebaseó el commit encima. El push original fue
+     rechazado por eso.
+2. **República del par**: `release-personal.yml` con `pkgrel=100` (§5.3: incremento por
+   republicanación del mismo pkgver). Runs: `33570727843`, `33570965650` fallaron por **TLS
+   transitorio de archlinux.org** (curl del archlinux-keyring en el bootstrap del Dockerfile —
+   infra de GitHub, no nuestro código); `33571098815` VERDE a la 3ª.
+3. **Gotcha descubierto (fix en el workflow)**: pacman deriva el nombre del db de la SECCIÓN
+   de pacman.conf. Con `[omarchy-personal]`, `pacman -Sy` pide `omarchy-personal.db` (404
+   porque solo había `omarchy.db`+`.files`). Fix: el paso de publish publica alias
+   `omarchy-personal.db`/`.files` (+ `.sig`) = copias de las omarchy.*. Commit `26e524a`
+   (`personal`) y cherry-pick `fe47b16` (`master`, registro).
+4. **Verificación del sombreado** (sin tocar la máquina dev): pseudo-root en `/tmp` con las
+   dbs reales (desc + files del par stock `4.0.2-1` extraídos del repo oficial) y keyring con
+   la clave personal lsign'd + la de packaging de omarchy:
+   - `pacman -Su --print` (par stock "instalado", conf con `[omarchy-personal]` antes de
+     `[omarchy]`): `omarchy-personal omarchy 4.0.2-100`, `omarchy-personal omarchy-settings
+     4.0.2-100`; el resto del ecosistema (omarchy-keyring, limine-mkinitcpio-hook,
+     limine-snapper-sync, ttf-jetbrains-mono-nerd-basic…) sigue atribuido a `[omarchy]` oficial.
+   - conf sin `[omarchy-personal]` → sin upgrades. `pacman -Si` confirma
+     Repository=omarchy-personal / 4.0.2-100.
+   - Las firmas de la db se verificaron (la sync pasa con `SigLevel = Required DatabaseOptional`).
+   - Tooling: docker sin daemon y sudo con timestamp expirado → `fakeroot pacman` con
+     `--root/--dbpath/--gpgdir` en `/tmp` (o (manejo de `DownloadUser = alpm` fuera del conf de
+     prueba)). Los dbs oficiales se descargaron de `pkgs.omarchy.org/stable/x86_64/omarchy.db`
+     y `omarchy.files`.
+   - Publicado: `omarchy-4.0.2-100-any.pkg.tar.zst`, `omarchy.db`/.sig, `omarchy-personal.db`/.sig,
+     `omarchy.files`/.sig, `omarchy-personal.files`/.sig — todos HTTP 200 en Pages.
+
+### Estado actual (inventario)
+
+- Fork fuente: `robert-flo/omarchy` `personal` @ `ebfb3038` (merge `4d687d4d` + Etapa 4).
+- `robert-flo/omarchy-pkgs`: `personal` @ `26e524a` (alias db), `master` @ `fe47b16`.
+- Par publicado: `omarchy` / `omarchy-settings` **4.0.2-100** (firmado `D5E75EAC51A44715`).
+- Sombreado del par verificado (dry-run); la prueba END-TO-END en máquina dev es el paso que sigue.
+
+### Lo que falta (próximos pasos)
+
+1. **Prueba end-to-end (§0.2 item 5)**: reinstalar par stock en la máquina dev → confiar clave
+   personal → `omarchy refresh pacman` → `omarchy update` → verificar que el par se toma de
+   `[omarchy-personal]`. (Requiere keyring con la personal ANTES del refresh, por el SigLevel
+   Required heredado.)
+2. Cadencia W9: rebase de `personal` sobre `upstream/quattro` (tag `v4.0.2`), sync del tag al
+   fork y re-pin del release (con nueva republicación: pkgrel 101 o el que toque según §5.3).
+3. Clave pública del repo personal en `keys/omarchy-personal-repo.pub.asc` del scratchpad
+   (privada NO versionada; solo secret `GPG_PRIVATE_KEY`).

@@ -289,4 +289,14 @@ else
 fi
 echo
 echo "== Estado: máquina en LÍNEA DEV (omarchy update normal no aplica hasta reinstalar el par stock)."
-echo "== Siguiente paso según plan §0.2: Etapa 3 / W7 (release personal)."
+echo "== Etapa 3 / W7 (release personal): COMPLETADA (run verde 2026-09-01; ver WORKLOG)."
+echo
+echo "== Consumir el repo personal (máquinas stock, sin el par dev):"
+echo "   Servido por GitHub Pages: https://robert-flo.github.io/omarchy-personal-repo"
+echo "   En /etc/pacman.conf, junto al [omarchy] oficial:"
+echo "     [omarchy-personal]"
+echo "     SigLevel = Optional TrustAll"
+echo "     Server = https://robert-flo.github.io/omarchy-personal-repo/stable/x86_64"
+echo "   Importar la clave pública del repo personal (GPG ded., keyid D5E75EAC51A44715,"
+echo "   ./omarchy-personal-repo.pub.asc en el scratchpad) para verificar dbs/paquetes."
+echo "   Re-publicar: gh workflow run release-personal.yml -R robert-flo/omarchy-pkgs --ref personal -f version=v4.0.2 -f pkgrel=99"

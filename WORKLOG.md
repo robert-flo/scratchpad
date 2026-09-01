@@ -279,3 +279,95 @@ fork con `OMARCHY_UPSTREAM_URL`. Al arrancar, la máquina estaba en `4.0.0.r1832
 2. Cadencia W9: rebase de `personal` sobre `upstream/quattro` (tag `v4.0.2` presente en
    upstream) y luego sync del tag al fork (ver nota del inventario).
 3. Etapa 4: sombreado parcial (§5.4) y prueba end-to-end del `omarchy update` con `[omarchy-personal]`.
+---
+
+## Sesión 2026-09-01 (4ª parte) — Etapa 3 / W7 COMPLETA: repo personal en GitHub Pages
+
+### Contexto
+
+Cerrar la Etapa 3/W7: el repositorio personal `robert-flo/omarchy-personal-repo` publica el
+par `omarchy` + `omarchy-settings` pineado a la rama `personal` del fork, servido por
+**GitHub Pages** en `https://robert-flo.github.io/omarchy-personal-repo`, generado por la
+Action `release-personal.yml` que corre en el repo huésped `robert-flo/omarchy-pkgs`.
+
+### Qué se hizo (orden real)
+
+1. **Maquinaria leída** (fork de omarchy-pkgs, rama `personal`): `helpers/paths.sh`
+   (`REPO_ROOT=${OMARCHY_REPO_ROOT:-$BUILD_ROOT/pkgs.omarchy.org}`, `REPO_DIR=$REPO_ROOT/$MIRROR/$ARCH`,
+   `BUILD_OUTPUT_DIR=$BUILD_ROOT/build-output/$MIRROR/$ARCH`), `helpers/docker-helpers.sh`
+   (imagen `omarchy-pkg-builder:latest-$arch-$mirror` con `--build-arg MIRROR`), `bin/repo`
+   (subcomandos reales: `release build sign promote update clean advance`; `--local`),
+   `bin/sign`/`build/sign.sh` (requiere env `GPG_PRIVATE_KEY` + `GPG_PASSPHRASE`),
+   `bin/promote-build` (host-side), `bin/update-repo` (docker, siempre imagen edge,
+   monta `$REPO_ROOT:/output`), `bin/advance-channel` (termina con `sync-repo` → rclone,
+   evitable para el fork), `bin/sync-repo`.
+2. **Clave de despliegue** para `omarchy-personal-repo` (write, título
+   `omarchy-personal-release`, ssh-ed25519) → secret `SSH_DEPLOY_KEY`; clave GPG dedicada
+   (uid `Omarchy Personal Repo`, keyid `D5E75EAC51A44715`, **sin passphrase**) → secrets
+   `GPG_PRIVATE_KEY` / `GPG_PASSPHRASE="unused"`. Necesario porque el `GITHUB_TOKEN` del
+   huésped no escribe en otro repo.
+3. **`release-personal.yml`** en `.github/workflows/` (rama `personal` + copia de registro
+   en `master` — GitHub exige el workflow en la rama default para el dispatch por API).
+   Pipeline: checkout (`source`=fork omarchy personal, `pkgs`, `repo`=gh-pages con
+   `ssh-key`) → pin del par (lockstep, dentro de `archlinux:base-devel` porque el runner no
+   tiene `vercmp`/`makepkg`; como no-root por sudorule) → sed `pkgrel=99` (§5.3) → guard vs
+   estable oficial (vercmp en contenedor) → commit+push del pin a `personal` → build → sign
+   → promote → update → clean → publicar a gh-pages (resuelve symlinks de db, firma con la
+   GPG dedicada) → validar con curl.
+4. **Fixes iterativos de la Action** (cada uno en un run):
+   - `vercmp`/`git`/`makepkg` ausentes en el runner → pin dentro de contenedor Arch
+     (`pacman -S git`; makepkg no corre como root → usuario `builder`; `safe.directory /pkgs`).
+   - `rg` no instalado → `grep -nE`.
+   - Nombres de subcomandos de `bin/repo`: `promote/update/clean` (no `promote-build`/...).
+   - `release_ring: "fast"` en ambos `.omarchy/package.json` (commit `7c522d7`).
+   - **`pinned:true` nunca builda nativo a stable** (`package_builds_for_mirror`, helpers/
+     package-metadata.sh:203) → el flujo original con `--mirror stable` saltaba ambos con
+     "not in release_ring=fast" (mensaje engañoso). Se probó also edge y falló por deps.
+   - Fix definitivo: build **estable directo** contra el ecosistema estable oficial —
+     el Dockerfile del fork ya mantiene el repo `[omarchy]` remoto (`pkgs.omarchy.org/stable`)
+     para `MIRROR=stable` (hook FORK en `build/Dockerfile`), y el workflow hace **un-pin
+     temporal local** (`jq '.pinned=false'`, sin commitear) antes del build.
+   - **Permisos del contenedor**: `make_dir_writable` chown'd los dirs al runner no-root,
+     pero makepkg/repo-add corren como `builder` (uid 1000) → db vacía `omarchy-build`
+     no se creaba ("database file does not exist", "could not find database"). Fix:
+     `make_dir_writable` ahora hace además `chmod -R a+rwX` (helpers/docker-helpers.sh).
+   - Publish: `readlink` relativo → `cp -L "$(dirname "$f")/$rl"`.
+   - Validación: `VERSION` lleva `v` (`v4.0.2`) pero el filename no → se deriva el nombre
+     real desde `repo/stable/x86_64/`.
+5. **Run verde final**: `33565145113` — todos los steps `success`, y validación manual:
+   artefactos 200, `omarchy.db.sig` = Good signature (key D5E75EAC51A44715), db contiene
+   `omarchy 4.0.2-99` + `omarchy-settings 4.0.2-99`.
+6. **Bootstrap** actualizado con el "cómo consumir" `[omarchy-personal]` (Server gh-pages,
+   SigLevel Optional TrustAll, importar clave pública, comando de re-publicación).
+
+### Decisiones registradas (con razón)
+
+| Decisión | Razón |
+|---|---|
+| Secrets en el repo huésped `omarchy-pkgs` (no en los forks de contenido) | Las Actions corren ahí; desambiguación de W7 ya anotada en agents_fork.md |
+| Deploy key SSH para escribir en `omarchy-personal-repo` | `GITHUB_TOKEN` del huésped no tiene scope cross-repo |
+| Registro del workflow en `master` + dispatch `--ref personal` | GitHub exige el workflow en la rama default para `workflow_dispatch` por API |
+| Build estable directo con un-pin temporal local | Los `pinned` no buildan nativo a stable por diseño (protegen releases del orquestador); el fork publica solo el par y quiere el ecosistema estable oficial como base de deps |
+| `chmod a+rwX` en `make_dir_writable` | Runner no-root + contenedor `builder` (uid 1000): chown solo no basta |
+| Key GPG sin passphrase + `GPG_PASSPHRASE="unused"` | Evita pin de PIN/tty en `gpg --batch`; firma detach en `--batch` sin prompt |
+| Validación deriva el filename del árbol publicado, no de los inputs | `version` lleva `v`; el nombre real del `.pkg.tar.zst` no |
+
+### Estado actual (inventario)
+
+- Repos: `robert-flo/omarchy-personal-repo` (gh-pages con `omarchy`/`omarchy-settings`
+  `4.0.2-99` firmadas + dbs), `robert-flo/omarchy-pkgs` (`personal` @ `95a69b4`, `master`
+  @ `febb052` con registro sync), `robert-flo/omarchy` (personal, pineado en los runs).
+- Secrets en `omarchy-pkgs`: `SSH_DEPLOY_KEY`, `GPG_PRIVATE_KEY`, `GPG_PASSPHRASE`.
+- Deploy key `omarchy-personal-release` (write) en `omarchy-personal-repo`.
+- Artefactos locales sensibles en `/tmp/opencode/`: `gh_pages_deploy(.pub)`,
+  `omarchy-personal-repo.asc` / `.pub.asc` — NO versionar.
+- Sitio en vivo: `https://robert-flo.github.io/omarchy-personal-repo/stable/x86_64`.
+
+### Lo que falta (próximos pasos)
+
+1. Etapa 4: sombreado parcial (§5.4) y prueba end-to-end de `omarchy update` con
+   `[omarchy-personal]` en una máquina stock.
+2. Cadencia W9: rebase de `personal` sobre `upstream/quattro` (tag `v4.0.2`), sync del tag
+   al fork y re-pin del release.
+3. Rol del archivo `omarchy-personal-repo.pub.asc`: documentar su guardado definitivo
+   (p. ej. en el scratchpad) fuera de `/tmp/opencode`.

@@ -142,7 +142,8 @@ else
   # Réplica literal de remove_pkgver_function() de bin/omarchy-dev-pkg-test:
   # elimina la función completa contando llaves para saber dónde termina.
   remove_pkgver_function() {
-    local pkgbuild="$1" tmp="$pkgbuild.tmp"
+    local pkgbuild="$1"
+    local tmp="$pkgbuild.tmp"
     awk '
       /^pkgver\(\)[[:space:]]*\{/ { in_pkgver = 1; depth = 0 }
       in_pkgver {

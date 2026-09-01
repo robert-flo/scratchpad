@@ -164,3 +164,48 @@ sesión 2026-08-30 queda como dev/POC; esta replica el entorno y, de paso, cierr
    `OMARCHY_UPSTREAM_URL=https://github.com/robert-flo/omarchy.git` para el pin).
 3. Etapa 3 / W7: repo `omarchy-personal-repo` + Action de release (ver §0.2 del plan).
 4. Cadencia W9: rebase de `personal` sobre `upstream/quattro` (hay tag `v4.0.2` nuevo).
+---
+
+## Sesión 2026-09-01 (2ª parte) — Xataka no aparecía: `omarchy update` pisa el par dev
+
+### Qué pasó
+
+Tras instalar el par `dev.0e6c11d5-1`, la webapp Xataka no aparecía en el launcher.
+Diagnóstico con `/var/log/pacman.log`:
+
+1. Nuestra instalación (14:00) fue correcta — el paquete SÍ contenía `Xataka.desktop`.
+2. A las 14:04 corrió un `omarchy update` (firma: `pacman -Syu --overwrite /usr/share/omarchy/*`)
+   y "upgradó" el par dev a `4.0.0.r1832.g23dab9e-1` — un paquete **del repo oficial** `[omarchy]`,
+   que no contiene Xataka.
+
+### Causa raíz (nuevo hecho para el modelo mental)
+
+**El repo oficial stable publica TAMBIÉN los paquetes `-dev`** (`omarchy-dev` /
+`omarchy-settings-dev`, versionados `4.0.0.rNNN.g<sha>` desde git describe de quattro), y
+`vercmp 4.0.0.r1832.g23dab9e dev.0e6c11d5` → **gana el oficial**. Consecuencia: en una
+máquina dev, **cualquier `omarchy update` reemplaza el par dev local por el del repo oficial**
+y borra las personalizaciones. Es la regla §5.3 (sombreado) manifestándose en el loop dev:
+el dev local pierde por versión, no por nombre.
+
+### Regla de operación para máquinas dev
+
+- En la máquina dev **no correr `omarchy update`** mientras esté en línea dev (el update
+  normal es para máquinas en stock/producción). Si corre por accidente: re-ejecutar el
+  bootstrap (fase 2 reinstala el par local).
+- (Mejora futura posible, a decidir: pkgver dev con prefijo numérico alto p. ej. `99.<sha>`
+  para que siempre gane el vercmp — desviación del formato upstream `dev.<sha>`, no tomar a la ligera.)
+
+### Qué se hizo
+
+- Rebuild + reinstalación del par local vía `bootstrap-omarchy-dev.sh` (que además quedó
+  fixeado: bug `local pkgbuild=... tmp=$pkgbuild.tmp` con `set -u`).
+- `omarchy-refresh-applications` (paso W1 obligatorio para usuarios existentes) →
+  `~/.local/share/applications/Xataka.desktop` + icono `xataka.png` en hicolor.
+- Validación: `desktop-file-validate` OK; lanzamiento verificado con `hyprctl clients`:
+  clase `chrome-www.xataka.com__-Default`, título "Xataka - Tecnología y gadgets…". **OK.**
+
+### Estado
+
+- Máquina en línea dev `dev.0e6c11d5-1` con Xataka materializada y lanzada.
+- Para iterar nuevas webapps: receta W1 (`.desktop` + icono en el fork → commit →
+  bootstrap fase 2 → `omarchy-refresh-applications`).

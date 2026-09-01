@@ -30,11 +30,15 @@ Decisiones ya fijadas (Q&A previo):
   `~/Work/omarchy/omarchy-pkgs` (fork), ambos con `origin` (fork) + `upstream` (omacom).
   Bootstrap reproducible en máquina nueva: `bootstrap-omarchy-dev.sh` (este repo).
 - Machine dev (sesión 08-30): `omarchy-dev` + `omarchy-settings-dev` `dev.89759761-1` (reemplazaron al stock; máquina en línea dev).
-  La máquina del bootstrap 2026-09-01 todavía NO tiene el par dev instalado (validar `omarchy dev pkg-test` localmente).
+- Máquina del bootstrap 2026-09-01: en línea dev `dev.0e6c11d5-1` (criterio de aceptación Etapa 0 validado el 2026-09-01 3ª parte; ver WORKLOG).
+- Dev loop apuntado al fork: PKGBUILDs del fork (origin de `omarchy-pkgs`) + `OMARCHY_UPSTREAM_URL`
+  apuntando a `https://github.com/robert-flo/omarchy.git` (automatizado en `bootstrap-omarchy-dev.sh`).
 - POC webapp: **Xataka** (`applications/Xataka.desktop` + `applications/icons/Xataka.png`) en `personal`;
   materializado con `omarchy-refresh-applications`; ventana Chrome modo app abierta y verificada
   (`chrome-www.xataka.com__-Default`). El patrón queda demostrado para iterar las ~55 webapps del dueño.
-- Upstream publicó tag `v4.0.2` (visto en el fetch del 2026-09-01); `personal` sigue en base `89759761` — entrar en la próxima cadencia W9.
+- Upstream publicó tag `v4.0.2` (visto en el fetch del 2026-09-01); `personal` está en `0e6c11d5`
+  (merge de `omacom:quattro` en `personal`) y el fork **aún no tiene el tag `v4.0.2`** (solo hasta
+  v4.0.1) — entrar en la próxima cadencia W9 (rebase + sync del tag al fork).
 - Decisiones de los hitos que matizan el plan: ver "Decisiones registradas" en WORKLOG (ruta default del tool,
   POC Xataka, repo de notas público con nombre neutro, `pkexec` sin TTY, `--ask 4` en `pacman -U`,
   bootstrap como script commiteado).
@@ -50,10 +54,13 @@ y este bloque de estado antes de continuar.
    fork creado con `gh repo fork`, clone en `~/Work/omarchy/omarchy-pkgs` (rama `master`) con
    `upstream` configurado. Etapa 0 completa; falta validar `omarchy dev pkg-test` en la
    máquina nueva del bootstrap (criterio de aceptación local).
-2. **Puntar el dev loop al fork**: en `~/Work/omarchy/omarchy-pkgs` el `origin` YA es el fork
-   (clone directo del fork); falta apuntar `OMARCHY_UPSTREAM_URL` a
-   `https://github.com/robert-flo/omarchy.git`.
-   Validar que `omarchy dev pkg-test` (los dos paquetes) compila e instala desde el fork.
+2. ~~**Puntar el dev loop al fork**~~ **HECHO (2026-09-01, 3ª parte)**:
+   - PKGBUILDs del fork: `origin` de `~/Work/omarchy/omarchy-pkgs` ya es el fork (by layout).
+   - `OMARCHY_UPSTREAM_URL=https://github.com/robert-flo/omarchy.git` — sin esta env var el
+     pin engine (`bin/omarchy-pkgs` :25) usa el default `basecamp/omarchy.git` (repo
+     equivocado). Ahora la exporta y verifica `bootstrap-omarchy-dev.sh`.
+   - Validado: `omarchy dev pkg-test` compila e instala el par desde el fork en la máquina
+     del bootstrap → `pacman -Q` = `dev.0e6c11d5-1` (criterio de aceptación Etapa 0 cumplido).
 3. **Etapa 3 / W7 — entregable `omarchy-personal-repo`**:
    - Crear repo `<user>/omarchy-personal-repo`, branch `gh-pages`, hosting Pages desde ese branch.
    - Escribir `.github/workflows/release-personal.yml` (receta completa en W7): checkout de los 3
@@ -189,8 +196,8 @@ Estados intermedios hasta el estado final, que es: **en cada máquina, `omarchy 
   - `~/Work/omarchy/omarchy-pkgs/` → fork de pkgs (los PKGBUILDs solo se tocan para el `source=` al fork y el bump de pin/pkgrel; la maquinaria se mantiene intacta, §1.8).
 - [x] En el fork fuente: `git remote add upstream git@github.com:omacom/omarchy.git`, y crear la rama personal (`personal`, ver §7.1) arriba de `upstream/quattro`.
 - [x] En el fork de pkgs: `git remote add upstream git@github.com:omacom/omarchy-pkgs.git`.
-- [ ] Verificar el ciclo dev en la máquina de desarrollo: `omarchy dev pkg-test` construye e instala `omarchy-settings-dev` + `omarchy-dev`.
-- **Criterio de aceptación:** `pacman -Q omarchy-dev omarchy-settings-dev` reporta `dev.<sha>`, y la máquina sigue funcional.
+- [x] Verificar el ciclo dev en la máquina de desarrollo: `omarchy dev pkg-test` construye e instala `omarchy-settings-dev` + `omarchy-dev` (HECHO 2026-09-01 3ª parte, junto con §0.2.2: dev loop apuntado al fork vía `OMARCHY_UPSTREAM_URL`).
+- **Criterio de aceptación:** `pacman -Q omarchy-dev omarchy-settings-dev` reporta `dev.<sha>`, y la máquina sigue funcional. → `dev.0e6c11d5-1` en esta máquina.
 
 ### Etapa 1 — Probar el ciclo completo con una webapp mínima
 

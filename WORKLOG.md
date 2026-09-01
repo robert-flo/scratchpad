@@ -209,3 +209,73 @@ el dev local pierde por versión, no por nombre.
 - Máquina en línea dev `dev.0e6c11d5-1` con Xataka materializada y lanzada.
 - Para iterar nuevas webapps: receta W1 (`.desktop` + icono en el fork → commit →
   bootstrap fase 2 → `omarchy-refresh-applications`).
+
+---
+
+## Sesión 2026-09-01 (3ª parte) — Criterio de aceptación Etapa 0 + dev loop al fork (§0.2 pasos 1–2)
+
+### Contexto
+Cerrar los dos pasos pendientes del plan §0.2 sobre esta máquina: (1) validar el ciclo dev
+local (`omarchy dev pkg-test` compila e instala desde el fork) y (2) apuntar el dev loop al
+fork con `OMARCHY_UPSTREAM_URL`. Al arrancar, la máquina estaba en `4.0.0.r1832.g23dab9e-1`
+(el par `-dev` del repo oficial, que un `omarchy update` había pisado sobre nuestro
+`dev.0e6c11d5`); esto confirma de nuevo la "LECCIÓN APRENDIDA" de la sesión anterior.
+
+### Qué se hizo (orden real)
+
+1. **Validación del ciclo dev con el tool del fork** (`omarchy dev pkg-test`):
+   - Re-ejecutar el tool directo en esta sesión falla igual que antes: el último paso es
+     `sudo pacman -U` y aquí no hay TTY para el password (`sudo: a password is required`).
+     Regla del SKILL.md (escalación por presencia de terminal) → se corrió una **copia del
+     tool del checkout del fork** (`~/Work/omarchy/omarchy-installer/bin/omarchy-dev-pkg-test`)
+     con la única desviación del mecanismo de privilegio: `sudo` → `pkexec`, sumando
+     `--ask 4` (patrón verificado del bootstrap). El resto (remove_pkgver_function, pkgver
+     `dev.<sha>`, `OMARCHY_SRC=$CHECKOUT`, makepkg `-s --skipchecksums`) quedó literal.
+   - Resultado build: `omarchy-settings-dev` y `omarchy-dev` compilados desde el checkout del
+     fork (`OMARCHY_SRC` = `~/Work/omarchy/omarchy-installer`) con PKGBUILDs del fork
+     (`~/Work/omarchy/omarchy-pkgs`, origin = `robert-flo`). Install: downgrade exitoso
+     `4.0.0.r1832...` → `dev.0e6c11d5-1` (pacman lo anunció como downgrade y `--noconfirm`
+     lo confirmó; la dep `omarchy-dev` → `omarchy-settings-dev=${pkgver}` se satisfizo porque
+     el tool instala por separado en orden settings→engine).
+   - **Criterio de aceptación Etapa 0 CUMPLIDO**: `pacman -Q omarchy-dev omarchy-settings-dev`
+     → `dev.0e6c11d5-1` ambas.
+2. **Dev loop apuntado al fork (§0.2.2)**:
+   - Componente 1 (ya cumplido por el layout): PKGBUILDs del fork vía `origin` de
+     `omarchy-pkgs`. Componente 2 (nuevo): `OMARCHY_UPSTREAM_URL`. Se verificó en
+     `bin/omarchy-pkgs` (:25, :132-156) que sin esta env var el pin engine usa el default
+     `https://github.com/basecamp/omarchy.git` (repo equivocado) para resolver tag/commit
+     (`git ls-remote`) y reescribir `_tag`/`_commit`/`pkgver`/`sha256sums`. Se apuntó a
+     `https://github.com/robert-flo/omarchy.git` y se automatizó en el bootstrap (abajo);
+     se validó que el fork resuelve tags (v4.0.0/v4.0.1) como fuente.
+3. **Bootstrap `bootstrap-omarchy-dev.sh` actualizado** para automatizar en instalaciones futuras:
+   - Exporta `OMARCHY_UPSTREAM_URL` (todo el porqué en comentario de cabecera).
+   - Nueva sección de verificación al final: comprueba que `origin` de `omarchy-pkgs` es el
+     fork y que `OMARCHY_UPSTREAM_URL` apunta al fork (regex que acepta `…omarchy`/`.git`).
+   - Mensaje de cierre actualizado (deja de decir "apuntar OMARCHY_UPSTREAM_URL"); verificado
+     con `bash -n` y una corrida idempotente `--no-install`.
+
+### Decisiones registradas (con razón)
+
+| Decisión | Razón |
+|---|---|
+| Criterio de aceptación validado con copia del tool (solo sudo→pkexec + `--ask 4`, resto literal) | Es la regla del SKILL.md (sin TTY → pkexec); desviación mínima y documentada; valida el build real del tool del checkout del fork, no una reconstrucción a mano |
+| `OMARCHY_UPSTREAM_URL` automatizada como export en el bootstrap (no en `~/.bashrc`) | Decisión del dueño; se documenta su carácter de sesión (efímera) y su rol exclusivo en el pin de release (W7), no en el dev loop |
+| Dev loop apuntado al fork = dos hechos separados (PKGBUILDs del fork + URL de pin) | Distinguir evita confusión: el dev loop ya salía del fork sin ninguna config; lo que faltaba era el repos de origen del pin engine para futuro release |
+
+### Estado actual (inventario)
+
+- Repos: forks `robert-flo/omarchy` (`quattro`+`personal` @ `0e6c11d5`) y
+  `robert-flo/omarchy-pkgs` (`master` @ `6774df1`); `robert-flo/scratchpad` (notas).
+  Observación: el fork `robert-flo/omarchy` NO tiene aún el tag `v4.0.2` (solo hasta v4.0.1)
+  — pendiente de la cadencia de sync W9.
+- Esta máquina: en línea dev `dev.0e6c11d5-1` (criterio Etapa 0 cumplido vía `pkg-test`).
+  Dev loop apuntado al fork (PKGBUILDs del fork + `OMARCHY_UPSTREAM_URL`).
+- Bootstrap: automatiza ambos pasos para máquinas nuevas.
+
+### Lo que falta (próximos pasos)
+
+1. Etapa 3 / W7: repo `omarchy-personal-repo` + Action de release (pin con
+   `OMARCHY_UPSTREAM_URL` al fork — ya garantizado por el bootstrap).
+2. Cadencia W9: rebase de `personal` sobre `upstream/quattro` (tag `v4.0.2` presente en
+   upstream) y luego sync del tag al fork (ver nota del inventario).
+3. Etapa 4: sombreado parcial (§5.4) y prueba end-to-end del `omarchy update` con `[omarchy-personal]`.

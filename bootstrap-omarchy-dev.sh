@@ -62,8 +62,31 @@
 #   validan en la instalación conjunta del paso 5.
 #
 # ADVERTENCIA de estado: la fase 2 deja la máquina en la LÍNEA DEV (reemplaza el par
-# stock por el par dev). En ese estado `omarchy update` normal NO aplica hasta
-# reinstalar el par stock. Es el estado esperado de una máquina de desarrollo.
+# stock por el par dev). Es el estado esperado de una máquina de desarrollo.
+#
+# ---------------------------------------------------------------------------
+# LECCIÓN APRENDIDA (2026-09-01): `omarchy update` PISA EL PAR DEV LOCAL
+#
+#   Síntoma: instalamos el par dev.0e6c11d5 (con la webapp Xataka dentro) y minutos
+#   después la app desaparecía del launcher. El log de pacman mostraba que un
+#   `omarchy update` había "upgradado" el par a 4.0.0.r1832.g23dab9e-1.
+#
+#   Causa raíz: el repo oficial [omarchy] (pkgs.omarchy.org/stable) publica TAMBIÉN
+#   los paquetes `omarchy-dev` y `omarchy-settings-dev` — versionados con git
+#   describe de quattro (4.0.0.rNNN.g<sha>) — y esa versión le GANA por vercmp a
+#   nuestro `dev.<sha>` (vercmp 4.0.0.r1832.g23dab9e dev.0e6c11d5 → mayor el
+#   oficial). O sea: para pacman, el par dev del repo oficial es un "upgrade" del
+#   nuestro, y cualquier `omarchy update` lo instala, borrando las personalizaciones
+#   del checkout local. Es la regla de sombreado §5.3 del plan manifestándose dentro
+#   del loop dev: se pierde por VERSIÓN, no por nombre.
+#
+#   Regla de operación derivada (ver WORKLOG, sesión 2026-09-01 2ª parte):
+#   - En una máquina en línea dev NO correr `omarchy update`. El update normal es
+#     para máquinas stock/producción.
+#   - Si corrió por accidente (las personalizaciones "desaparecen"): re-ejecutar
+#     este script; la fase 2 reinstala el par local. El propio script ahora lo
+#     detecta: después de instalar verifica que `pacman -Q` reporte exactamente el
+#     pkgver recién construido, y explica qué hacer si no coincide.
 #
 # El script es idempotente en la fase 1 (si el checkout ya existe, lo salta en vez
 # de romper). La fase 2 se puede omitir con --no-install.
@@ -74,6 +97,29 @@ set -euo pipefail
 WORK="$HOME/Work/omarchy"
 GH_SSH="git@github.com:"
 FORK_OWNER="robert-flo"
+
+# ---------------------------------------------------------------------------
+# POR QUÉ SE EXPORTA OMARCHY_UPSTREAM_URL (paso §0.2.2 del plan)
+#
+#   El dev loop (omarchy dev pkg-test) ya apunta al fork por DOS rutas: lee los
+#   PKGBUILDs de ~/Work/omarchy/omarchy-pkgs (origin = robert-flo/omarchy-pkgs)
+#   y construye desde ~/Work/omarchy/omarchy-installer (origin = robert-flo/
+#   omarchy). Nada que configurar ahí.
+#
+#   OMARCHY_UPSTREAM_URL es OTRA cosa: es el repo fuente del que el pin engine
+#   (bin/omarchy-pkgs release) resuelve el tag/commit a pinear vía git ls-remote
+#   y sobre el que reescribe _tag/_commit/pkgver/sha256sums en los PKGBUILDs de
+#   omarchy y omarchy-settings. El DEFAULT del tool es
+#   https://github.com/basecamp/omarchy.git — pinearía contra el repo equivocado.
+#   Apuntarla al fork es el paso §0.2.2 del plan (ver agents_fork.md) y
+#   condición para la Etapa 3/W7 (release personal).
+#
+#   Alcance: se exporta para las subshells del propio script y queda documentada.
+#   Como variable de sesión, no persiste tras el script — si se requiere en un
+#   shell futuro, volver a exportarla (o definirla en ~/.bashrc).
+# ---------------------------------------------------------------------------
+UPSTREAM_SRC="${OMARCHY_UPSTREAM_URL:-https://github.com/robert-flo/omarchy.git}"
+export OMARCHY_UPSTREAM_URL="$UPSTREAM_SRC"
 
 NO_INSTALL=false
 [[ "${1:-}" == "--no-install" ]] && NO_INSTALL=true
@@ -193,15 +239,54 @@ else
 
   rm -rf "$build_dir"
 
-  # Criterio de aceptación Etapa 0: pacman -Q reporta dev.<sha> en ambos.
+  # Criterio de aceptación Etapa 0: pacman -Q reporta dev.<sha> en AMBOS paquetes.
   echo
   echo "== Verificación (criterio de aceptación Etapa 0):"
-  pacman -Q omarchy-dev omarchy-settings-dev
+  q_output=$(pacman -Q omarchy-dev omarchy-settings-dev || true)
+  echo "$q_output"
+  if [[ $(grep -c "$NEW_PKGVER" <<<"$q_output") -eq 2 ]]; then
+    echo "   OK: el par instalado coincide con el commit del checkout."
+  else
+    # Ruta defensiva: si la versión instalada no es la que acabamos de poner,
+    # algo la pisó en el ínterin (caso conocido: omarchy update trajo el par
+    # -dev del repo oficial, ver "LECCIÓN APRENDIDA" en la cabecera).
+    echo "   ¡ATENCIÓN! La versión instalada NO es ${NEW_PKGVER}." >&2
+    echo "   Causa probable: corrió un 'omarchy update' y pacman lo 'upgradó' al" >&2
+    echo "   par -dev del repo oficial (sin tus personalizaciones)." >&2
+    echo "   Recuperación: re-ejecutar este script (fase 2) y NO correr omarchy" >&2
+    echo "   update en la máquina dev." >&2
+    exit 1
+  fi
+  echo
+  echo "== Recordatorio (usuarios EXISTENTES): el paquete NO materializa .desktops."
+  echo "   Para ver webapps nuevas en el launcher: omarchy-refresh-applications"
 fi
 
 echo
 echo "== Layout final:"
 find "$WORK" -maxdepth 1 -mindepth 1 -type d -printf '   %p\n' | sort
+
+# ---------------------------------------------------------------------------
+# VERIFICACIÓN paso §0.2.2 — dev loop apuntado al fork.
+#   - PKGBUILDs desde el fork: origin de omarchy-pkgs debe ser el fork.
+#   - Fuente para el pin: OMARCHY_UPSTREAM_URL debe apuntar al fork (no al
+#     default basecamp de bin/omarchy-pkgs).
+# ---------------------------------------------------------------------------
+echo
+echo "== Verificación (paso §0.2.2: dev loop → fork):"
+pkgs_origin=$(git -C "$WORK/omarchy-pkgs" remote get-url origin)
+if [[ "$pkgs_origin" == *"${FORK_OWNER}/omarchy-pkgs"* ]]; then
+  echo "   OK: PKGBUILDs vienen del fork (origin $pkgs_origin)"
+else
+  echo "   ¡ATENCIÓN! origin de omarchy-pkgs NO es el fork: $pkgs_origin" >&2
+  exit 1
+fi
+if [[ "$OMARCHY_UPSTREAM_URL" =~ ${FORK_OWNER}/omarchy(\.git)?$ ]]; then
+  echo "   OK: OMARCHY_UPSTREAM_URL=$OMARCHY_UPSTREAM_URL"
+else
+  echo "   ¡ATENCIÓN! OMARCHY_UPSTREAM_URL no apunta al fork: $OMARCHY_UPSTREAM_URL" >&2
+  exit 1
+fi
 echo
 echo "== Estado: máquina en LÍNEA DEV (omarchy update normal no aplica hasta reinstalar el par stock)."
-echo "== Siguientes pasos según plan §0.2: apuntar OMARCHY_UPSTREAM_URL al fork y Etapa 3/W7."
+echo "== Siguiente paso según plan §0.2: Etapa 3 / W7 (release personal)."

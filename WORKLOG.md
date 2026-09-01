@@ -369,5 +369,5 @@ Action `release-personal.yml` que corre en el repo huésped `robert-flo/omarchy-
    `[omarchy-personal]` en una máquina stock.
 2. Cadencia W9: rebase de `personal` sobre `upstream/quattro` (tag `v4.0.2`), sync del tag
    al fork y re-pin del release.
-3. Rol del archivo `omarchy-personal-repo.pub.asc`: documentar su guardado definitivo
-   (p. ej. en el scratchpad) fuera de `/tmp/opencode`.
+3. Clave pública del repo personal ya guardada en `keys/omarchy-personal-repo.pub.asc` del
+   scratchpad (privada NO versionada; solo secret `GPG_PRIVATE_KEY`).

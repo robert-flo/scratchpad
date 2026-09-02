@@ -47,10 +47,11 @@ Decisiones ya fijadas (Q&A previo):
 - POC webapp: **Xataka** (`applications/Xataka.desktop` + `applications/icons/Xataka.png`) en `personal`;
   materializado con `omarchy-refresh-applications`; ventana Chrome modo app abierta y verificada
   (`chrome-www.xataka.com__-Default`). El patrón queda demostrado para iterar las ~55 webapps del dueño.
-- Upstream publicó tag `v4.0.2` (visto en el fetch del 2026-09-01); `personal` del fork fuente
-  está en `ebfb3038` (merge de `omacom:quattro` `4d687d4d` + Etapa 4) y el fork **aún no tiene
-  el tag `v4.0.2`** (solo hasta v4.0.1) — pendiente en la próxima cadencia W9 (rebase + sync
-  del tag al fork).
+- **Cadencia W9 EJECUTADA (2026-09-01, 7ª parte)**: rebase de `personal` sobre `upstream/quattro`
+  (quedó en línea recta: Xataka `0deee8d8` + Etapa 4 `1540c220` sobre `b71dcad9`), tag `v4.0.2`
+  sync'd al fork (ligero → `346e69e1`), Action re-dispatch con pkgrel **101** (run `33579948670`
+  SUCCESS) → par **4.0.2-101** publicado (`omarchy`/`omarchy-settings`) y **verificado end-to-end**
+  en la máquina dev: `omarchy update -y` subió 100→101 desde `[omarchy-personal]` (pacman.log).
 - Decisiones de los hitos que matizan el plan: ver "Decisiones registradas" en WORKLOG (ruta default del tool,
   POC Xataka, repo de notas público con nombre neutro, `pkexec` sin TTY, `--ask 4` en `pacman -U`,
   bootstrap como script commiteado).
@@ -108,7 +109,8 @@ y este bloque de estado antes de continuar.
    sudo) → en sesión no interactiva el prompt expira (passwd_timeout ~5 min) y el update aborta;
    en terminal normal simplemente pide la contraseña. No es un bug del fork; documentación sola.
 6. **Después del hito**: iterar las ~55 webapps del dueño (patrón de `webapp-workflow.md`); onboarding
-   de máquinas reales (Etapa 5); cadencia de sync con upstream (Etapa 6) cuando haya máquinas en uso.
+   de máquinas reales (Etapa 5); la cadencia de sync con upstream (Etapa 6/W9) YA se practicó en forma
+   manual (WORKLOG 7ª parte) y queda como operación continua cuando haya máquinas en uso.
 
 ## 1. Modelo mental de Omarchy upstream (hechos que un agente debe saber)
 
@@ -284,9 +286,9 @@ aliases (commit `26e524a`, copia en `master` `fe47b16`).
 
 ### Etapa 6 — Cadencia de sync con upstream y operación
 
-- [ ] Fijar el procedimiento de sync (receta W9): cada `git fetch upstream` → detectar nuevos tags/releases → rebase de la rama personal → correr la Action (que re-pinea y republica el par).
-- [ ] El guard de versión (§5.3) vive como paso de la Action (aborta si el par personal quedó por detrás del stable oficial).
-- [ ] Checklist post-sync documentado.
+- [x] Fijar el procedimiento de sync (receta W9) — **practicado manualmente (2026-09-01, 7ª parte)**: fetch upstream → rebase de `personal` → sync de tags al fork → re-dispatch de la Action (re-pin + república, guard §5.3 incluido) → `omarchy update` en máquinas; ciclo completo verificado en la máquina dev (4.0.2-100 → 4.0.2-101).
+- [x] El guard de versión (§5.3) vive como paso de la Action (aborta si el par personal quedó por detrás del stable oficial). (Ejecutado en cada run de la Action.)
+- [ ] Checklist post-sync documentado (pendiente formalizarlo; el flujo está en WORKLOG 7ª parte).
 - **Criterio de aceptación:** a lo largo de 2 ciclos de release upstream, las máquinas se mantienen personales, al día y sin pérdida de personalizaciones.
 
 ### Etapa 7 — Camino a contribuir

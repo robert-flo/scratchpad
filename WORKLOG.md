@@ -493,6 +493,78 @@ verdad que queríamos demostrar). Máquina: `ludus` (desktop, sin TTY para el ag
 ### Lo que falta (próximos pasos)
 
 1. Cadencia W9: rebase de `personal` sobre `upstream/quattro` (tag `v4.0.2`), sync del tag al fork
-   y re-pin/republicación (pkgrel 101 o el que toque según §5.3).
+   y re-pin/republicación (pkgrel 101 o el que toque según §5.3) — **EJECUTADA en la 7ª parte, PASA**.
 2. Valorar documentar el quirk de `sudo -v`/stay-awake en la cadencia W-repos (nada que arreglar en
    el fork; comportamiento aguas arriba).
+
+---
+
+## Sesión 2026-09-01 (7ª parte) — Cadencia W9 ejecutada (rebase lineal + re-pin 4.0.2-101) y verificada end-to-end
+
+### Contexto
+
+Ejecutar la cadencia W9: sync del fork fuente con upstream (`quattro`), sync del tag `v4.0.2` al
+fork y re-publicación del par personal, verificando la convergencia en la máquina dev.
+
+### Qué se hizo (orden real)
+
+1. **Refresco del entorno de shell** (mise reshim tras la subida de tools de la 6ª parte):
+   `opencode 1.18.26`, `codex 0.152.1`, `mise 2026.8.15`.
+2. **Recon del estado antes del rebase**: `upstream/quattro` NO se había movido desde nuestra base
+   (`b71dcad9` ya era el HEAD). `personal` estaba en `ebfb3038` (Etapa 4 sobre el merge `4d687d4d`
+   del dueño). El tag local `v4.0.2` ya existía (apunta a `346e69e1`, el release de upstream).
+3. **Rebase** `git rebase upstream/quattro` → **línea recta** de 2 commits personales sobre
+   `b71dcad9` (`0deee8d8` Xataka POC + `1540c220` Etapa 4), sin conflictos. Nuevo HEAD
+   **`1540c220`**.
+4. **Test suite** `./test/all`: 224/225 suites OK; falla solo `test/shell.d/snapper-test.sh` por
+   estar **ambiental** (busca un checkout hermano `omarchy-iso` en el workspace, que no existe
+   aquí; no es del fork). El resto (CLI router, theme pipeline, shell, migraciones) todo verde.
+5. **Push forzado** de `personal` al fork (`ebfb3038...1540c220` forzado — el rebase reescribió
+   historia — con `--force-with-lease`). **Sync del tag `v4.0.2`** al fork (`git push origin
+   v4.0.2`); queda como tag ligero apuntando a `346e69e1`, junto a los ya presentes v4.0.0/v4.0.1.
+6. **Re-dispatch de la Action** `release-personal.yml`:
+   `gh workflow run ... -f version=v4.0.2 -f pkgrel=101` → run **`33579948670` SUCCESS** (5m12s).
+   - El workflow re-pinea el par al nuevo commit de `personal` (`COMMIT=$(git rev-parse HEAD)=1540c220`)
+     vía `bin/omarchy-pkgs release v4.0.2 --commit 1540c220`, resetea pkgrel a 1 y luego sed a 101.
+   - En los objetos publicados se verifica el par **`omarchy-4.0.2-101-any.pkg.tar.zst`** +
+     `omarchy-settings-4.0.2-101` (+ `.sig`) y la db `omarchy.db`/`omarchy-personal.db`; la firma
+     de la db se confirma **Good signature** con la clave `D5E75EAC51A44715`.
+   - pkgrel=101 (§5.3): mismo pkgver `4.0.2` que la republicación anterior (100) → incremento.
+     (El pin engine resetearía a 1, pero el paso de republicación sed a pkgrel=PKGREL=101.)
+7. **Convergencia end-to-end en `ludus`**:
+   - 1er `omarchy update -y` abortó por el **quirk de `sudo -v`** (mismo que en la 6ª): al retirar
+     el drop-in `Defaults !authenticate`, `omarchy-update-stay-awake` corre `sudo -v` bajo pty y
+     con NOPASSWD en sudoers `sudo -v` sigue pidiendo password → expira a los 5 min → aborte.
+   - Reaplicado temporalmente `Defaults:dominus !authenticate` → 2º `omarchy update -y` **RC=0**:
+     pacman subió `omarchy-settings` y `omarchy` **4.0.2-100 → 4.0.2-101** desde `[omarchy-personal]`
+     (`[ALPM] upgraded ... (4.0.2-100 -> 4.0.2-101)` en pacman.log), snapshot #8.
+8. **Verificación final**: `pacman -Q` = `omarchy`/`omarchy-settings` **4.0.2-101**; `/etc/pacman.conf`
+   mantiene `[omarchy-personal]` (línea 32) antes de `[omarchy]`; la webapp del fork `Xataka.desktop`
+   presente en `/usr/share/omarchy/applications/`. Retirado el drop-in sudoers temporal (máquina
+   como estaba).
+
+### Decisiones registradas (con razón)
+
+| Decisión | Razón |
+|---|---|
+| Rebase (no merge) de `personal` sobre `upstream/quattro` | §7.1: única estrategia de sync; resultado lineal limpio; no arrastra merges intermedios |
+| Push forzado con `--force-with-lease` | El rebase reescribe la historia de `personal`; `-with-lease` protege contra sobrescritura ajena |
+| `pkgrel=101` para el re-pin del mismo `pkgver` | §5.3: incremento por cada republicación del mismo pkgver (99→100 Etapa 4, →101 aquí) |
+| Reaplicar `Defaults !authenticate` solo para ejecutar el update y retirarlo al terminar | Quirk de `sudo -v`/stay-awake bajo pty no interactivo; dejar la máquina sin cambios de sudo |
+
+### Estado actual (inventario)
+
+- Fork fuente: `robert-flo/omarchy` `personal` @ **`1540c220`** (Xataka `0deee8d8` + Etapa 4
+  `1540c220` sobre upstream `b71dcad9`); tags `v4.0.2`/`v4.0.1`/`v4.0.0`/`v4.0.0-beta3` sync'd.
+- `robert-flo/omarchy-pkgs`: pin commit `1540c220`, pkgrel 101 (commit de pin + commit publish de la Action).
+- Par publicado/instalado en dev: **4.0.2-101** firmado `D5E75EAC51A44715`; upgrade 100→101 confirmado.
+- `omarchy-pkgs` `master` (registro): sin cambios en esta sesión (el re-pin fue solo a `personal`).
+
+### Lo que falta (próximos pasos)
+
+1. Iterar las ~55 webapps del dueño (patrón `webapp-workflow.md`) sobre `personal`; cada cambio de
+   fuente del par → re-dispatch de la Action con pkgrel incrementado (§5.3) y `omarchy update` en máquinas.
+2. Etapa 5 (onboarding de máquinas reales) cuando haya máquinas en uso; Etapa 6 (cadencia de sync
+   como operación continua) ya validada en su forma manual con esta sesión.
+3. Registrar el micro-patrón de `sudo -v`/NOPASSWD en la doc de la cadencia (puramente operativo,
+   no es bug del fork).

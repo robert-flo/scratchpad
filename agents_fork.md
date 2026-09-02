@@ -398,9 +398,11 @@ Alternativa dev (solo dev-link, sin rebuild): con `omarchy dev link`, copiarlo a
 
 ### W7 — Publicar el par personal (la pieza central; GitHub Actions como build host)
 
-**ESTADO: IMPLEMENTADA Y VERIFICADA (run verde `33565145113`, 2026-09-01).** Esta receta
-refleja lo que realmente se ejecutó; las desviaciones sobre el borrador figuran como deltas
-acá abajo y en el WORKLOG 4ª parte.
+**ESTADO: IMPLEMENTADA, VERIFICADA Y GENERALIZADA (2026-09-01).** Run inicial verde
+`33565145113`; desde la 8ª parte la Action **ya no hardcodea el par**: publica **todos** los
+PKGBUILD con `"personal": true` en su `.omarchy/package.json` (runs `33582784470`/`33583330456`).
+Esta receta refleja el estado actual; las desviaciones sobre el borrador figuran como deltas
+acá abajo, en WORKLOG 4ª parte (versión original) y 8ª parte (generalización).
 
 Precondiciones verificadas: clave GPG dedicada (keyid `D5E75EAC51A44715`, **sin passphrase**);
 sus secrets **y los de la deploy key** viven en la repo **`<user>/omarchy-pkgs`** (donde corre
@@ -408,7 +410,9 @@ la Action), no en `omarchy-personal-repo`: `GPG_PRIVATE_KEY`, `GPG_PASSPHRASE="u
 `SSH_DEPLOY_KEY` (deploy key **write** a `omarchy-personal-repo`, porque el `GITHUB_TOKEN` del
 huésped no escribe en otro repo). El workflow se commitea en la rama `personal` **y una copia de
 registro en `master`** (GitHub exige el workflow en la rama default para `workflow_dispatch` por
-API; el dispatch usa `--ref personal`).
+API). **CRÍTICO — el dispatch SIEMPRE con `--ref personal`:** sin él GitHub usa el workflow de la
+rama por defecto (`master`), que es la copia de registro SIN la generalización (lo demostró el run
+`33582420572`, que republicó el par sin `hola-mundo`).
 
 El modelo es: la Action replica el pipeline de upstream de punta a punta (`bin/repo`), y su paso
 final reemplaza `sync-repo`/rclone por un commit+push al branch `gh-pages`. El dueño YA NO
@@ -420,17 +424,19 @@ publica a mano.
    no trae `vercmp`/`makepkg`; makepkg rechaza root): el engine `./bin/omarchy-pkgs release
    <vX.Y.Z> --commit <sha> --no-push --yes` se ejecuta `sudo`-free por un usuario `builder`
    (`su builder -c`, con el checkout montado y `chmod -R a+rwX /pkgs`, `safe.directory`).
-   Re-aplicar la **regla §5.3** (`pkgrel=99` + incremento por republicación) y commitear el pin
-   a `personal`.
+   Re-aplicar la **regla §5.3** (`pkgrel=99` + incremento por republicación) **solo al subconjunto
+   `pinned`** (el par) y commitear el pin a `personal`.
 3. **Guard §5.3** antes de buildar: `vercmp` (contenedor Arch) del pkgver+pkgrel del PKGBUILD
    contra el oficial actual en `pkgs.omarchy.org/stable/x86_64/omarchy.db.tar.zst`.
-4. **Build** con imagen `MIRROR=stable`:
+4. **Recolección del conjunto `personal: true`** y **Build** con imagen `MIRROR=stable`:
    ```bash
    export OMARCHY_REPO_ROOT="$GITHUB_WORKSPACE/repo"
    rm -rf "$OMARCHY_REPO_ROOT/stable"
-   for p in omarchy omarchy-settings; do jq '.pinned = false' "pkgbuilds/$p/.omarchy/package.json" > t && mv t "pkgbuilds/$p/.omarchy/package.json"; done
-   ./bin/repo --local build --mirror stable --arch x86_64 --package omarchy omarchy-settings
+   # un-pin temporal LOCAL (no se commitea) SOLO al subconjunto pinned (el par)
+   for p in $PINNED_PERSONAL_PKGS; do jq '.pinned = false' "pkgbuilds/$p/.omarchy/package.json" > t && mv t "pkgbuilds/$p/.omarchy/package.json"; done
+   ./bin/repo --local build --mirror stable --arch x86_64 --package $PERSONAL_PKGS
    ```
+   (La Action deriva `PERSONAL_PKGS`/`PINNED_PERSONAL_PKGS` con jq sobre todos los `pkgbuilds/*/`.)
    **Delta FORK clave:** los paquetes `pinned:true` NUNCA buildan nativo a stable por diseño
    (`package_builds_for_mirror`, `helpers/package-metadata.sh`), y `--mirror stable` además
    exige `release_ring=fast`. La solución no es buildar edge→advance (el repo personal no
@@ -451,12 +457,28 @@ publica a mano.
    (`[omarchy-personal]` → `omarchy-personal.db`). `git add -A && git commit -m "publish: <v>";
    git push origin gh-pages` (con guard: si no hay cambios, saltar el commit).
 8. **Validar** con `curl` a `https://<user>.github.io/omarchy-personal-repo/stable/x86_64/…`.
-   **Delta:** derivar el nombre del `.pkg.tar.zst` desde el árbol publicado (`ls repo/stable/
-   x86_64/omarchy-*.pkg.tar.zst`), NO desde el input `version` — que lleva `v` (`v4.0.2`) y el
-   filename no. Dar margen amplio: Pages tarda en ~~deployar~~ (subir a 60×20 s si hace falta).
+   **Delta:** la validación recorre TODOS los `PERSONAL_PKGS` (no solo el par) y deriva el nombre
+   del `.pkg.tar.zst` desde el árbol publicado (`ls repo/stable/x86_64/<pkg>*.pkg.tar.zst`), NO
+   desde el input `version` — que lleva `v` (`v4.0.2`) y el filename no. Dar margen amplio: Pages
+   tarda en ~~deployar~~ (subir a 60×20 s si hace falta).
 
 **Trigger:** `workflow_dispatch` (manual), atado a la cadencia de sync (W9). Re-publicación típica:
-`gh workflow run release-personal.yml -R robert-flo/omarchy-pkgs --ref personal -f version=v4.0.2 -f pkgrel=99`.
+`gh workflow run release-personal.yml -R robert-flo/omarchy-pkgs --ref personal -f version=v4.0.2 -f pkgrel=101`.
+
+**Ciclo de vida de un paquete personal (8ª parte, qué publica y cómo llega a las máquinas):**
+- `omarchy update` hace `pacman -Syu` (+AUR `yay -Sua` + mise): **actualiza** los paquetes ya
+  instalados, **NO instala** paquetes nuevos no presentes. Un paquete personal nuevo se instala
+  **una vez** en cada máquina con `pacman -S <pkg>` (resuelto desde `[omarchy-personal]`); a partir
+  de ahí `omarchy update` lo mantiene al día (verificado: `hola-mundo` instalado `0.1.0-1`,
+  mantenido `0.1.0-1 → 0.1.0-2`).
+- **Para añadir un paquete personal futuro:** crear `pkgbuilds/<pkg>/PKGBUILD` +
+  `.omarchy/package.json` con `source: local`, `release_ring: fast` y `"personal": true`;
+  commitear y push a `personal`; re-dispatch de la Action (`--ref personal`, §5.3 pkgrel del par
+  crece si el pkgver se mantiene). La máquina que lo tenga instalado lo mantendrá.
+- **Reconciliar el set entre máquinas:** `omarchy reinstall pkgs` (que lee `omarchy-base.packages`
+  del fork, §1.6) — si un paquete personal debe estar en TODAS las máquinas desde el onboarding,
+  añadirlo también a `install/omarchy-base.packages` del fork fuente (decisión pendiente para
+  `hola-mundo`, WORKLOG 8ª parte "Lo que falta", item 2).
 
 **Fallback de dev (sin Action):** el flujo de la receta original sigue sirviendo para iterar —
 build local con `OMARCHY_SRC`, firmas `gpg --detach-sign`, `repo-add --sign`, push manual a
@@ -475,8 +497,8 @@ Máquina x86_64, sin tocar, instalada con la ISO oficial estable de omarchy.org:
 
 2. **Bootstrap del par personal** (hasta que el pacman.conf del sistema tenga el repo): descargar el par `.pkg.tar.zst` (+ `.sig`) del GitHub Pages y `sudo pacman -U` de ambos juntos (misma versión). Con esto el sistema queda en el par personal.
 3. **`omarchy refresh pacman`** → copia el `pacman.conf` y mirrorlist **del fork** (que ya incluye `[omarchy-personal]` ANTES de `[omarchy]`), y actualiza. Ahora el repo personal es prioridad.
-4. **`omarchy update`** → convergencia completa (paquetes + migraciones + hooks); verifica que `omarchy`/`omarchy-settings` upgraden (el guard §5.3 garantiza que se elijan los personales).
-5. **`omarchy reinstall pkgs`** → reconcilia el set con `install/omarchy-base.packages` del fork (máquinas idénticas).
+4. **`omarchy update`** → convergencia completa (paquetes + migraciones + hooks); verifica que `omarchy`/`omarchy-settings` upgraden (el guard §5.3 garantiza que se elijan los personales). **Nota 8ª parte:** `omarchy update` hace `pacman -Syu` y **actualiza** paquetes ya instalados, NO instala paquetes nuevos. Los extras personales (p. ej. `hola-mundo`) que no estén en `omarchy-base.packages` se instalan una vez con `pacman -S <pkg>`; de ahí en adelante `omarchy update` los mantiene.
+5. **`omarchy reinstall pkgs`** → reconcilia el set con `install/omarchy-base.packages` del fork (máquinas idénticas; si un personal va en todas, añadirlo a esa lista).
 6. **`omarchy reinstall-configs`** (opcional si ya existe el primer usuario, o antes de crear usuarios) → materializa `/etc/skel` personalizado en `$HOME`.
 7. **Validar:** `pacman -Q omarchy omarchy-settings` reportan la versión personal; `omarchy-debug --no-sudo --print` sin errores; la webapp de prueba aparece en el launcher; `omarchy version` sin sorpresas.
 

@@ -59,6 +59,26 @@ Al terminar imprime `done: every launcher binary resolves.` (o la lista de lo qu
 > Si una máquina no tiene `yay`, el script salta el bloque AUR y avisa qué falta (Edge/Lyricify/
 > spicetify). Instala `yay` primero y vuelve a correrlo.
 
+## Cómo se instalan las dependencias en una máquina futura (resumen)
+
+Basta con ejecutar el bootstrap **después de instalar el par personal** (paso 6 de `docs/02`):
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/robert-flo/omarchy/personal/bin/omarchy-personal-bootstrap-launchers)
+```
+
+El script hace todo de forma **idempotente** (seguro de repetir; solo añade lo que falta) y
+verifica al final con `done: every launcher binary resolves.`. Qué instala cada bloque:
+
+| Bloque | Paquetes/binarios | Cómo | Si falta la herramienta |
+|---|---|---|---|
+| Sistema | `ncdu kitty dua-cli spotify-launcher` | `sudo pacman -S` | – (repo oficial) |
+| AUR | `microsoft-edge-stable-bin` `lyricify` `spicetify-cli` | `yay -S` | salta y avisa (instalar `yay` y repetir) |
+| AI CLIs (mise) | `qwen opencode codex omp agy grok` + npm `openclaude zero cmd` | `mise use -g` + `npm -g` | requiere `mise` |
+| Ctrladores oficiales | `mimo`, `openclaw` (+ gateway `18789`), `opencode-desktop` (AppImage) | instaladores oficiales + wrappers en `~/.local/bin` | `curl` |
+| Hermes | wrapper CLI + shim `~/.hermes/hermes-agent/venv/bin/hermes` | `omarchy-install-hermes-cli --now` | requiere el par instalado |
+| Trabajo | `~/src` | `mkdir -p` | – |
+
 ## Cómo entendemos/revisamos la operatividad
 
 La verificación es recorrer los `Exec=` de `~/.local/share/applications/*.desktop`, extraer el

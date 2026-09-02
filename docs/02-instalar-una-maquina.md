@@ -21,9 +21,11 @@ sudo pacman-key --lsign-key D5E75EAC51A44715
 
 # 2) Instalar el par personal la primera vez (aún no hay repo configurado)
 #    Descarga desde el navegador (o curl):
-#    https://robert-flo.github.io/omarchy-personal-repo/stable/x86_64/omarchy-4.0.2-102-any.pkg.tar.zst
-#    …y su .sig (mismo nombre + .sig), e instala AMBOS a la vez (misma versión, obligatorio):
-sudo pacman -U omarchy-4.0.2-102-any.pkg.tar.zst omarchy-settings-4.0.2-102-any.pkg.tar.zst
+#    La versión actual del par se lee de la tabla de estado del README (hoy 4.0.2-103).
+    #    Descarga desde el navegador (o curl):
+    #    https://robert-flo.github.io/omarchy-personal-repo/stable/x86_64/omarchy-<VERSIÓN>-any.pkg.tar.zst
+    #    …y su .sig (mismo nombre + .sig), e instala AMBOS a la vez (misma versión, obligatorio):
+sudo pacman -U omarchy-<VERSIÓN>-any.pkg.tar.zst omarchy-settings-<VERSIÓN>-any.pkg.tar.zst
 #    El .sig descargado al lado del .pkg.tar.zst lo verifica pacman automáticamente
 #    (Good signature de D5E75EAC51A44715); no hace falta pasarlo como argumento.
 
@@ -36,8 +38,9 @@ omarchy update
 # 5) Reconciliar la lista de paquetes con la del sistema personal
 omarchy reinstall pkgs
 
-# 6) [Solo si ya exite el primer usuario o vas a usarlo enseguida]
-#    Instala los bins que corren los launchers del fork (CLIs de IA, navegador
+# 6) [Solo si ya exite el primer usuario o vas a usarlo enseguida — y solo DESPUÉS
+#    de haber instalado el par personal en el paso 2; el bootstrap usa sus helpers y `yay`]
+#    Instala las dependencias que corren los launchers del fork (CLIs de IA, navegador
 #    Edge, TUI helpers, Hermes, app desktop de OpenCode, ~/src). Idempotente.
 bash <(curl -fsSL https://raw.githubusercontent.com/robert-flo/omarchy/personal/bin/omarchy-personal-bootstrap-launchers)
 
@@ -48,9 +51,11 @@ omarchy reinstall-configs
 ## Comprobar que quedó bien
 
 ```bash
-pacman -Q omarchy omarchy-settings      # → omarchy 4.0.2-102 / omarchy-settings 4.0.2-102
+pacman -Q omarchy omarchy-settings      # → omarchy 4.0.2-103 (misma versión ambos)
 pacman -Q hola-mundo                    # → hola-mundo 0.1.0-2  (instálalo antes si quieres)
 omarchy-debug --no-sudo --print         # sin errores
+bash <(curl -fsSL https://raw.githubusercontent.com/robert-flo/omarchy/personal/bin/omarchy-personal-bootstrap-launchers)
+                                        # → "done: every launcher binary resolves."
 ```
 
 Además, en `/etc/pacman.conf` debes ver la sección `[omarchy-personal]` **antes** de `[omarchy]`

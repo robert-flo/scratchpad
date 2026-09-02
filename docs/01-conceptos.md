@@ -33,7 +33,7 @@ No tienes que combinar nada a mano: el mismo `omarchy update` mezcla ambos oríg
 
 | Paquete | Para qué | Versión |
 |---|---|---|
-| `omarchy` + `omarchy-settings` | El motor y los archivos del sistema, con tus personalizaciones | 4.0.2-102 |
+| `omarchy` + `omarchy-settings` | El motor y los archivos del sistema, con tus personalizaciones | 4.0.2-103 |
 | `hola-mundo` | Paquete de ejemplo (prueba de que el mecanismo funciona) | 0.1.0-2 |
 
 Todos los paquetes van **firmados** con una clave propia del proyecto. En la primera máquina se

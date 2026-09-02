@@ -567,4 +567,98 @@ fork y re-publicación del par personal, verificando la convergencia en la máqu
 2. Etapa 5 (onboarding de máquinas reales) cuando haya máquinas en uso; Etapa 6 (cadencia de sync
    como operación continua) ya validada en su forma manual con esta sesión.
 3. Registrar el micro-patrón de `sudo -v`/NOPASSWD en la doc de la cadencia (puramente operativo,
-   no es bug del fork).
+   no es bug del fork). Para el paquete PoC `hola-mundo` **EJECUTADO en la 8ª parte**: ver WORKLOG.
+
+---
+
+## Sesión 2026-09-01 (8ª parte) — Generalización de la repo personal: paquete propio `hola-mundo` publicado e instalable vía `omarchy update`
+
+### Contexto
+
+El usuario quería que la repo personal (formada hasta ahora SOLO por el par lockstep
+`omarchy`/`omarchy-settings`) pudiera llevar un paquete propio de ejemplo ("hola mundo") e
+instalarlo/mantenerlo con `omarchy update`, de forma que el mecanismo sirva para "todos mis
+pkgbuild personalizados". Se pidió investigar primero cómo lo hace upstream.
+
+### Cómo lo hace upstream (investigación)
+
+- `pkgbuilds/<pkg>/.omarchy/package.json` define `source` (`local` para los que se buildan y
+  sirven vía repo pacman; `aur` para los que solo se trackean y van por `yay`) y
+  `release_ring: fast` para buildear a stable.
+- `package_builds_for_mirror` (helpers/package-metadata.sh): para `stable` exige
+  `release_ring: fast` Y **no pinned** (`package_is_pinned && return 1`). El par lockstep es
+  `pinned: true` → por eso el fork hace un un-pin temporal + `--package` explícito.
+- Conclusión: "build all local" NO es fiel a upstream — arrastraría los sources AUR que también
+  matchean (localsend-bin, t3code-bin, mise-bin...) y aún así saltaría el par pinned. Lo fiel es
+  la **orquestación explícita de un set preciso**: en el fork, ese set = los marcados `personal: true`.
+
+### Qué se hizo
+
+1. **Marcador `"personal": true`** en `.omarchy/package.json` de `omarchy`, `omarchy-settings`
+   (y el nuevo `hola-mundo`). La Action lo usa como fuente de verdad del conjunto a publicar.
+2. **Paquete PoC `pkgbuilds/hola-mundo/`**: PKGBUILD trivial (`pkgname=hola-mundo`, `pkgver=0.1.0`,
+   `arch=('any')`, script `/usr/bin/hola-mundo` que imprime el mensaje), `.omarchy/package.json`
+   `source: local` + `release_ring: fast` + `personal: true`. Estructura idéntica a upstream
+   (PGKBUILD + metadata), sin lockstep/tag.
+3. **Generalización de la Action `release-personal.yml`** (previamente hardcodeada al par):
+   - Step nuevo `Recolecta paquetes personales`: junta todos los `pkgbuilds/*/` con `personal: true`
+     → `PERSONAL_PKGS` y el subconjunto `PINNED_PERSONAL_PKGS`.
+   - `Aplica pkgrel (§5.3)` → solo a `PINNED_PERSONAL_PKGS` (el par lockstep conserva su conteo de
+     republicación; los paquetes genericos conservan su pkgrel normal de PKGBUILD).
+   - `Build` → un-pin temporal solo a `PINNED_PERSONAL_PKGS` y `./bin/repo --local build --package $PERSONAL_PKGS`.
+   - `Commit del pin` → add de los PKGBUILD de `PINNED_PERSONAL_PKGS` (los genéricos se commitean
+     como cambios de fuente normales).
+   - `Validar publicación` → ahora valida TODOS los `PERSONAL_PKGS` en Pages, no solo el par.
+   - Header actualizado a la semántica "conjunto = personal:true".
+4. **Push a `roberta-flo/omarchy-pkgs` `personal`** (tras fetch+rebase; el remoto tenía el commit
+   de pin de la republicación de la 7ª parte — sin conflicto). HEAD `305b56d`.
+5. **Dispatch de la Action con `--ref personal`** (CRÍTICO: `gh workflow run` sin `--ref` usa el
+   workflow de la **rama por defecto, `master`**, que aún tiene la versión hardcodeada; por eso el
+   primer run `33582420572` repúblico el par sin hola-mundo. Con `--ref personal` el run
+   `33582784470` usó la Action generalizada).
+6. **Run `33582784470` SUCCESS**: `Building packages: hola-mundo omarchy-settings omarchy`,
+   `Successfully built hola-mundo 0.1.0-1`, signado, promovido y publicado. `omarchy.db` en Pages
+   ya lista `hola-mundo-0.1.0-1`, `omarchy-4.0.2-101`, `omarchy-settings-4.0.2-101`. Se verificó
+   el `desc` del paquete en la db (NAME/VERSION/DESC correctos).
+7. **Instalación en dev**: `pacman -S hola-mundo` (desde `[omarchy-personal]`) → `[ALPM] installed
+   hola-mundo (0.1.0-1)`; `hola-mundo` imprime el mensaje.
+8. **Ciclo de mantenimiento completo**: bump `pkgrel 1->2` de hola-mundo (commit `c4aa4dc`),
+   re-dispatch (`33583330456` SUCCESS, publica `hola-mundo-0.1.0-2` en Pages + db) y
+   `omarchy update -y` en dev → **`omarchy-personal/hola-mundo 0.1.0-1 → 0.1.0-2`** (RC=0).
+   `hola-mundo` ahora imprime y `pacman -Q` = 0.1.0-2. Pacman.log confirma installed y upgraded.
+9. **Orden de la cadencia W8 piña**: el drop-in temporal `100-e2e-noauth` se volvió a necesitar
+   (el `omarchy update -y` sin él se colgó en `sudo -v`/pty aún con `NOPASSWD: ALL` en
+   `99-omarchy-nopasswd-dominus`). Reaplicado, update OK, **retirado** tras terminar (máquina como estaba).
+
+### Decisiones registradas
+
+| Decisión | Razón |
+|---|---|
+| Marcador `personal: true` (no "build all local") | Fiel a upstream: orquestación explícita. "All local" arrastraría sources AUR que también matchean el filtro stable y seguiría saltando el par pinned. El set del repo personal queda = exactamente lo que el usuario mantiene |
+| `--ref personal` obligatorio al `gh workflow run` | Sin él, GitHub toma el workflow de la rama por defecto (`master`), que no tiene la generalización |
+| `Aplica pkgrel` solo a `PINNED_PERSONAL_PKGS` | §5.3 es del par lockstep (pkgrel = contador de republicación). Un paquete genérico usa su pkgrel normal de PKGBUILD |
+| hola-mundo con `arch=('any')`, `sha256sums=('SKIP')`, source file local | PoC mínima: sin deps ni descargas; `should_build_for_arch` devuelve true para `any` |
+| Reaplicar/retirar `Defaults !authenticate` para el update | Mismo micro-patrón que 6ª/7ª parte; deja la máquina sin cambios de sudo |
+
+### Estado actual (inventario)
+
+- `robert-flo/omarchy-pkgs` `personal` @ **`c4aa4dc`** (sobre `017e9f1` pin remoto de la W9):
+  workflow generalizado `personal:true`, par + hola-mundo marcados, PKGBUILD hola-mundo 0.1.0-2.
+- Repo publicado `omarchy-personal-repo` (gh-pages): `hola-mundo-0.1.0-2-any.pkg.tar.zst` (+sig),
+  `omarchy-4.0.2-101`, `omarchy-settings-4.0.2-101`. Runs: `33582784470` (0.1.0-1) y
+  `33583330456` (0.1.0-2) SUCCESS.
+- Dev machine: `hola-mundo 0.1.0-2` instalado vía `omarchy update`; par en 4.0.2-101. Drop-in
+  sudoers temporal retirado.
+- El `omarchy update` no instala paquetes nuevos no presentes (hace `pacman -Syu`): el PoC
+  demuestra instalar una vez (`pacman -S`) y que `omarchy update` lo mantiene. Para CUALQUIER
+  pkgbuild personal futuro: commitear el dir + marcarlo `personal:true` → re-dispatch → la máquina
+  que lo tenga instalado lo mantendrá al día.
+
+### Lo que falta (próximos pasos)
+
+1. (Opcional) Script/checklist de la cadencia personal: añadir un PKGBUILD personal =
+   mkdir pkgbuilds/<pkg> + PKGBUILD + `.omarchy/package.json` con `personal: true` + dispatch.
+2. Decidir si `hola-mundo` se envía también a `omarchy-base.packages` del fork fuente (para que el
+   onboarding de futuras máquinas lo instale desde el inicio, como hace upstream con los suyos).
+   O queda solo como PoC de mecanismo y se retira.
+3. Iterar webapps del dueño (sigue pendiente del hito principal).

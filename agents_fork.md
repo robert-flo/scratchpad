@@ -52,6 +52,13 @@ Decisiones ya fijadas (Q&A previo):
   sync'd al fork (ligero → `346e69e1`), Action re-dispatch con pkgrel **101** (run `33579948670`
   SUCCESS) → par **4.0.2-101** publicado (`omarchy`/`omarchy-settings`) y **verificado end-to-end**
   en la máquina dev: `omarchy update -y` subió 100→101 desde `[omarchy-personal]` (pacman.log).
+- **Repo personal GENERALIZADA a paquetes propios (2026-09-01, 8ª parte)**: la Action
+  `release-personal.yml` ya no hardcodea el par; publica **todos** los PKGBUILD con
+  `"personal": true` en su `.omarchy/package.json` (`PERSONAL_PKGS`; §5.3/pin solo al subconjunto
+  `pinned`). PoC `hola-mundo` creado y **verificado end-to-end**: `pacman -S` lo instaló desde
+  `[omarchy-personal]` (0.1.0-1) y `omarchy update` lo **mantuvo** (0.1.0-1 → 0.1.0-2, runs
+  `33582784470`/`33583330456`). Dispatch requiere `--ref personal` (la rama por defecto es
+  `master`, con la Action vieja).
 - Decisiones de los hitos que matizan el plan: ver "Decisiones registradas" en WORKLOG (ruta default del tool,
   POC Xataka, repo de notas público con nombre neutro, `pkexec` sin TTY, `--ask 4` en `pacman -U`,
   bootstrap como script commiteado).

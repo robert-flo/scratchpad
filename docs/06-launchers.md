@@ -29,6 +29,12 @@ Hay tres familias de `Exec`:
 
 ## El bootstrap idempotente
 
+> **⚠️ DEPRECADO (13ª parte).** Este script (`bin/omarchy-personal-bootstrap-launchers`) fue un
+> **POC** para demostrar cómo integrar ejecutables en el fork. No es el camino correcto para el
+> futuro: lo correcto es que la lógica viva en `install/user/*.sh` + `omarchy-mise-install` (fila
+> "Wrapper de terceros" de la **Matriz de Decisión de `ARCHITECTURE.md`**) y viaje a las máquinas
+> vía `omarchy update`. Se conserva aquí como referencia de implementación, no como mecanismo vivo.
+
 Un script del fork (`bin/omarchy-personal-bootstrap-launchers`) instala todo lo que los 78
 launchers ejecutan. Es **idempotente**: puedes correrlo varias veces y solo añade lo que falta.
 Instala (nada de esto va en el paquete; son dependencias de tus launchers):
@@ -78,6 +84,10 @@ verifica al final con `done: every launcher binary resolves.`. Qué instala cada
 | Ctrladores oficiales | `mimo`, `openclaw` (+ gateway `18789`), `opencode-desktop` (AppImage) | instaladores oficiales + wrappers en `~/.local/bin` | `curl` |
 | Hermes | wrapper CLI + shim `~/.hermes/hermes-agent/venv/bin/hermes` | `omarchy-install-hermes-cli --now` | requiere el par instalado |
 | Trabajo | `~/src` | `mkdir -p` | – |
+
+> **Ruta futura correcta:** estos bloques (mise/npm/oficiales) se integrarán como filas
+> "Wrapper de terceros" de la **Matriz de Decisión** (`install/user/*.sh` + `omarchy-mise-install`)
+> para que viajen por `omarchy update` y no por este script POC (ver banner de deprecación arriba).
 
 ## Cómo entendemos/revisamos la operatividad
 

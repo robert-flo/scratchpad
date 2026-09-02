@@ -49,7 +49,7 @@ conversaciones previas:
 - **Hosting del repo pacman personal:** GitHub Pages (repo `<user>/omarchy-personal-repo`, branch `gh-pages`), con **GitHub Actions como build host**: el pipeline de `omarchy-pkgs` (build → sign → promote → clean → update-repo) corre íntegro en el runner de la Action, replicando la maquinaria de upstream. La **única desviación permitida** es la capa final de entrega: push a `gh-pages` en vez de `sync-repo`/rclone (Pages no acepta rclone). Ver §1.8 y W7.
 - **Canal a publicar:** solo `stable` (no se replican edge/rc ni el walk de promoción).
 - **CI del fork de `omarchy-pkgs`:** replicar los 4 workflows de upstream (`test.yml`, `sync-aur.yml`, `sync-upstream.yml`, `sync-rebuilds.yml`) con ajustes mínimos (§1.8). Como el repo personal solo contiene el par (source local), lo valioso es `test.yml`; los tres de sync quedan inertes salvo que se agreguen paquetes AUR/upstream con personalización local.
-- **Ejecutables en `~/.local/bin`:** mezcla — los que encajen como comando del sistema se publican como `omarchy-*` (van a `/usr/bin` solos); los scripts de usuario van a `~/.local/bin` sembrados vía `/etc/skel` desde `omarchy-settings` (W3).
+- **Ejecutables en `~/.local/bin`:** mezcla — los que encajen como comando del sistema se publican como `omarchy-*` (van a `/usr/bin` solos); los scripts de usuario van a `~/.local/bin` sembrados vía `/etc/skel` desde `omarchy-settings` (W3) **o instalados por `install/user/*.sh` + `omarchy-mise-install` (fila "Wrapper de terceros" de la Matriz)**. Ver [`ARCHITECTURE.md`](ARCHITECTURE.md) §2/§4.
 - **Ya existe clave GPG** para firmar el repo de paquetes (y para git).
 - **Modelo de repos en máquinas:** sombreado parcial — `[omarchy-personal]` (el par `omarchy` + `omarchy-settings` + extras personales) listado ANTES del `[omarchy]` oficial en `/etc/pacman.conf`. El mirror oficial `pkgs.omarchy.org` sigue proveyendo el resto del ecosistema.
 
@@ -76,8 +76,11 @@ El detalle por sesión está en `WORKLOG.md`; el resumen publicado (versiones, r
       a la forma canónica (`applications/` + `applications/icons/`), publicado vía Action (par 4.0.2-103),
       operativo en la máquina dev + **bootstrap reproducible idempotente** (`bin/omarchy-personal-bootstrap-launchers`,
       commit `9cea4bdb`, 12ª parte) que instala los bins de los 78 launchers en cualquier máquina.
-      **PENDIENTE:** el resto de personalizaciones de configs (`omarchy reinstall-configs`); onboarding de
-      máquinas reales (Etapa 5); la cadencia W9 ya se practicó manualmente y queda como operación continua.
+      **El bootstrap queda DEPRECADO como mecanismo vivo (13ª parte, [`ARCHITECTURE.md`](ARCHITECTURE.md)):**
+      su lógica se integra en `install/user/*.sh` + `omarchy-mise-install` para viajar por `omarchy update`.
+      **PENDIENTE:** integrar el POC a la Matriz; el resto de personalizaciones de configs
+      (`omarchy reinstall-configs`); onboarding de máquinas reales (Etapa 5); la cadencia W9 ya se
+      practicó manualmente y queda como operación continua.
 
 ---
 
@@ -299,8 +302,10 @@ intervención manual.** Las etapas son acumulativas; cada una cierra con su crit
 - [x] **Launchers (webapps + TUIs + edge)** → portados a `applications/` (60 `.desktop` + 41 iconos),
       commit `8fac9d33` en `personal`, publicado por la Action en el par 4.0.2-103 (11ª parte).
       Nombres normalizados (typos/an + `ai`→`AI`); los ya existentes en upstream no se duplicaron.
-      Operating en dev: los 78 launchers resuelven sus bins vía
-      `bin/omarchy-personal-bootstrap-launchers` (12ª parte; ver [`docs/06-launchers.md`](docs/06-launchers.md)).
+      **Operativos en dev** (los 78 launchers resuelven sus bins; 12ª parte). El POC que los dejó
+      operativos (`bin/omarchy-personal-bootstrap-launchers`) queda **deprecado como mecanismo vivo
+      (13ª parte)**; su lógica se integra en la Matriz de Decisión de
+      [`ARCHITECTURE.md`](ARCHITECTURE.md) (ver [`docs/06-launchers.md`](docs/06-launchers.md)).
 - [ ] Inventariar cada personalización deseada y portarla a su ubicación en la fuente (W1–W6).
 - [ ] Validadas con `omarchy dev pkg-test` + su refresh correspondiente.
 - **Criterio de aceptación:** `omarchy reinstall-configs` + `omarchy reinstall pkgs` reproducen el estado deseado completo.
@@ -365,6 +370,9 @@ Replica la maquinaria de upstream corriendo entera en una Action; solo cambia el
 1. **Nada de inventos.** Antes de crear cualquier mecanismo, buscar si ya existe uno upstream (tabla
    canónica: `docs/file-layout.md:341`). Si un flujo parece requerir algo nuevo, es señal de que NO
    estamos siguiendo el modelo upstream y hay que re-preguntar.
+   **La Matriz de Decisión de [`ARCHITECTURE.md`](ARCHITECTURE.md) §2 es la puerta OBLIGATORIA:**
+   antes de tocar el fork, todo cambio se clasifica en una fila de esa tabla (config / webapp /
+   comando / wrapper / set de paquetes / provisioning-migración). No existe un "cajón de sastre".
 2. **Toda personalización es un cambio de fuente** en el fork, con la forma exacta de un PR aceptable
    (`applications/`, `config/`, `bin/`, `themes/`, `install/`, `migrations/`, etc.). Nunca un script per-máquina suelto.
 3. **El par `omarchy`/`omarchy-settings` siempre se publica en lockstep** desde el mismo commit y al mismo `pkgver` (§5.1).
@@ -381,6 +389,9 @@ Replica la maquinaria de upstream corriendo entera en una Action; solo cambia el
 
 Ciclo dev iterativo: **editar fuente → `omarchy dev pkg-test` → refresh del componente → validar**.
 El ciclo de publicación es W7.
+
+> **Entrada obligatoria:** antes de elegir una W, ubicar el cambio en la **Matriz de Decisión de
+> [`ARCHITECTURE.md`](ARCHITECTURE.md) §2**. La W correcta se sigue de la fila; nunca al revés.
 
 ### W1 — Agregar una webapp
 

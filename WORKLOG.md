@@ -24,6 +24,7 @@ invariantes) y [`README.md`](README.md) resume el estado actual. Si algo aquí c
 11. 2026-09-01 (10ª parte) — Validación L8 con run real (dry_run + publish; bug del guard booleano corregido) + decisión de `hola-mundo`.
 12. 2026-09-01 (11ª parte) — **Etapa 2 / Cosecha de launchers**: 60 `.desktop` + 41 iconos a la forma canónica (`applications/`), publicados en el par 4.0.2-103.
 13. 2026-09-01 (12ª parte) — **Etapa 2 operativa**: bins de los 78 launchers instalados en la máquina dev + bootstrap reproducible idempotente (`bin/omarchy-personal-bootstrap-launchers`).
+14. 2026-09-02 (13ª parte) — **Arquitectura fijada**: se crea `ARCHITECTURE.md` (Matriz de Decisión "dónde va cada cambio" + los dos escenarios `omarchy dev pkg-test` / `omarchy update`); se declara `omarchy-personal-bootstrap-launchers` deprecado como mecanismo vivo y se descarta el enfoque de plugins para ejecutables.
 
 ---
 
@@ -1008,3 +1009,65 @@ que los `Exec=` corren y empaquetar esa instalación como bootstrap idempotente.
 2. Etapa 5: onboarding de una segunda máquina real usando el **bootstrap de launchers**
    (`docs/02` paso 6b/`06-launchers.md`) como parte del procedimiento.
 3. (Opcional) spicetify tematizando Spotify (dependencia instalada, sin aplicar tema).
+
+---
+
+## Sesión 2026-09-02 (13ª parte) — Fijación de la arquitectura (Matriz de Decisión)
+
+### Contexto / el problema
+
+El dueño detectó que no había un camino único que responda "¿dónde va cada cambio del fork?". La
+Etapa 2 dejó un POC (`bin/omarchy-personal-bootstrap-launchers`) que instala dependencias, pero ese
+enfoque (script suelto que se corre por curl por máquina) **no es el modelo upstream**: para ser
+reproducible vía `omarchy update`, la lógica debe seguir los patrones del propio Omarchy. También se
+aclaró el malentendido de los configs en `$HOME` y se evaluó (y descartó) el enfoque de plugins.
+
+### Investigación (todo verificado en la fuente del fork)
+
+- **Configs de usuario SÍ van a `$HOME`:** `config/<app>/` del fork → `omarchy-settings` →
+  `/etc/skel/.config/**` (seed de usuarios nuevos) y `/usr/share/omarchy/config/**` (fuente de
+  resync de usuarios existentes). `omarchy reinstall-configs` = `cp -af /etc/skel/. ~/`;
+  `omarchy refresh config <relpath>` copia un archivo suelto. `config/kitty/kitty.conf` ya existe.
+- **Plugin manager de omarchy es SOLO del shell Quickshell** (`~/.config/omarchy/plugins/`, widgets
+  de barra). NO es el mecanismo para llevar ejecutables/configs del sistema. Descartado.
+- **Upstream ya instala wrappers de terceros en `$HOME/.local/bin` de forma gestionada:**
+  `omarchy refresh-applications` → `install/user/mise.sh` → `omarchy-mise-install <paquete> <cmd>`
+  escribe un stub idempotente en `~/.local/bin/<cmd>`. Ejemplos reales: `agy`, `opencode`, `omp`,
+  `grok`, `omarchy-install-hermes-cli`. **Este es el patrón correcto para el POC del bootstrap.**
+- **Dos paquetes, dos públicos:** `omarchy` (motor → `bin/` a `/usr/bin/`), `omarchy-settings`
+  (archivos: `config/`, `applications/`, `install/user/`, sets de paquetes).
+- Documentos autoritativos del propio fork: `docs/file-layout.md` (tabla "repo → path instalado"),
+  `agents/skills/command-metadata.md` (metadatos de `bin/`), `agents/skills/install-scripts.md`,
+  `agents/skills/migrations.md`, `AGENTS.md`.
+
+### Decisiones (FIRMES, quedan fijas)
+
+1. **Se crea `ARCHITECTURE.md`** como documento canónico del scratchpad con la **Matriz de Decisión**
+   (config de usuario / webapp / comando / wrapper de terceros / set de paquetes / provisioning-migración)
+   y la regla de los **dos escenarios**: `omarchy dev pkg-test` (dev, validar) vs `omarchy update`
+   (máquinas, distribuir). **Es la puerta obligatoria antes de tocar el fork.**
+2. **Todo viaja vía `omarchy update`** en máquinas futuras. Nada por script suelto por máquina, ni
+   dotfiles, ni mecanismos paralelos (reafirma el modelo de `agents_fork.md` §3 principio 1).
+3. **`omarchy-personal-bootstrap-launchers` queda DEPRECADO como mecanismo vivo**: su lógica se
+   absorbirá en `install/user/*.sh` + `omarchy-mise-install` (fila "Wrapper de terceros"). El POC se
+   conserva temporalmente como **referencia/ejemplo de integración**, no como flujo activo.
+4. **El enfoque de plugins de omarchy queda descartado explícitamente** para ejecutables/configs.
+5. Se refuerzan `agents_fork.md` (principio 1 + §4 entrada obligatoria + §0.2) y `README.md` para
+   enlazar a `ARCHITECTURE.md`.
+
+### Por qué esta arquitectura es la correcta
+
+Es 100% el modelo upstream, anclado a los documentos autoritativos del fork. No se inventa ninguna
+nueva forma de entrega: cada tipo de cambio encaja en un mecanismo que Omarchy ya posee y que ya
+está empaquetado en el par personal que se distribuye con `omarchy update`. Esto elimina la
+duplicidad de "¿lo hago con el bootstrap, el plugin, un script o un dotfile?" → siempre se responde
+con la Matriz.
+
+### Estado actual (inventario)
+
+- Scratchpad: `ARCHITECTURE.md` nuevo; `agents_fork.md`, `README.md`, `WORKLOG.md` actualizados.
+- Fork `robert-flo/omarchy`: `personal` @ `9cea4bdb` (sin cambios de fuente en esta sesión).
+- Pendiente (próximo paso): **ejecutar la Matriz** moviendo el POC del bootstrap a
+  `install/user/*.sh` + `omarchy-mise-install`, validado con `omarchy dev pkg-test` en la máquina
+  dev (escenario DEV), y que el `paquete` lo lleve a máquinas con `omarchy update` (escenario
+  MÁQUINAS).

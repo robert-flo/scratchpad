@@ -32,9 +32,11 @@ Todo lo siguiente está **completo y probado end-to-end** en la máquina dev:
 - **Etapa 2 (launchers)** — 60 launchers (39 webapps + 19 TUI/custom + 2 edge) + 41 iconos
   cosechados del sistema anterior a la forma canónica (`applications/`) y publicados
   (commit `8fac9d33`, par 4.0.2-103). Los que ya estaban en upstream no se duplicaron.
-  **Operativos en la máquina dev** (los 78 launchers resuelven sus bins; 12ª parte) y con
-  bootstrap reproducible (`bin/omarchy-personal-bootstrap-launchers`, commit `9cea4bdb`) para
-  dejarlos funcionando en cualquier máquina — ver [`docs/06-launchers.md`](docs/06-launchers.md).
+  **Operativos en la máquina dev** (los 78 launchers resuelven sus bins; 12ª parte). El POC que lo
+  dejó posible (`bin/omarchy-personal-bootstrap-launchers`, commit `9cea4bdb`) está **deprecado
+  como mecanismo vivo (13ª parte)**: su lógica se integra a la Matriz de Decisión de
+  [`ARCHITECTURE.md`](ARCHITECTURE.md) para viajar por `omarchy update` — ver
+  [`docs/06-launchers.md`](docs/06-launchers.md).
 
 Publicado en <https://robert-flo.github.io/omarchy-personal-repo/stable/x86_64> (firmado con la
 clave GPG dedicada `D5E75EAC51A44715`):
@@ -60,6 +62,7 @@ clave GPG dedicada `D5E75EAC51A44715`):
 | Quiero… | Leo |
 |---|---|
 | …entender el proyecto en 30 segundos | este `README.md` |
+| …**decidir dónde va cada cambio del fork** (puerta obligatoria antes de tocar nada) | [`ARCHITECTURE.md`](ARCHITECTURE.md) — Matriz de Decisión §2 |
 | …"cómo funciona por dentro" antes de tocar nada | `agents_fork.md` (plan) + [`build-install-cycle.md`](build-install-cycle.md) |
 | …entender un término | [`GLOSSARY.md`](GLOSSARY.md) |
 | …instalar/actualizar una máquina (cómo, sin porqué) | [`docs/`](docs/) — Índice: [`docs/README.md`](docs/README.md) |
@@ -79,6 +82,7 @@ clave GPG dedicada `D5E75EAC51A44715`):
 
 | Archivo | Qué es | Contenido |
 |---|---|---|
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | **Arquitectura (canónico)** | la Matriz de Decisión "dónde va cada cambio" + los dos escenarios (`omarchy dev pkg-test` / `omarchy update`) + reglas duras. **Fuente única de verdad; leer antes de tocar el fork** |
 | [`agents_fork.md`](agents_fork.md) | **Plan maestro** | encargo, modelo mental de upstream, hoja de ruta por etapas, recetas W1–W10, invariantes, estándares |
 | [`WORKLOG.md`](WORKLOG.md) | **Bitácora** | qué se hizo, por qué y cómo, sesión por sesión (memoria de procedimiento) |
 | [`RUNBOOK.md`](RUNBOOK.md) | **Fallos y recuperación** | modos de fallo reales, roll-forward (sin rollback de repo), rescate por máquina, checklist de cadencia, operación preventiva |

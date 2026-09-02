@@ -26,7 +26,7 @@ Una definición por término; si algo no está acá, se busca primero el términ
 | **pin / pin engine** | `bin/omarchy-pkgs release` reescribe el par con `_tag`/`_commit`/`pkgver`/`sha256sums` del commit base a publicar. Resetea `pkgrel` a 1 en cada cambio de `pkgver` (§5.1). |
 | **`pinned`** | Marca en `.omarchy/package.json` (`"pinned": true`): el paquete se genera por el pin engine y NO builda nativo a `stable` (por eso el un-pin temporal local en la Action). |
 | **`personal: true`** | Marca en `.omarchy/package.json` del PKGBUILD: EL flag que hace que la Action lo publique en el repo personal. |
-| **`pkgrel`** | Componente de la versión pacman después del guion (`4.0.2-101`). En el par personal es un contador de republicación (§5.3), base 99, incremento por cada república del mismo `pkgver` (hoy autoderivado por la Action). |
+| **`pkgrel`** | Componente de la versión pacman después del guion (`4.0.2-102`). En el par personal es un contador de republicación (§5.3), base 99, incremento por cada república del mismo `pkgver` (hoy autoderivado por la Action). |
 | **`pkgver`** | Versión del paquete (`4.0.2`). En el par personal = tag upstream base de la rama `personal`. |
 | **repo personal** | `robert-flo/omarchy-personal-repo` (Pages). Es un repo pacman de solo `stable`. |
 | **shading / sombreado parcial** | Modelo de repos en máquina: `[omarchy-personal]` listado ANTES de `[omarchy]` → el par y los extras personales se sirven del repo personal, el resto del ecosistema del mirror oficial (Etapa 4, §1.5). |

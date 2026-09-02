@@ -20,9 +20,9 @@ sudo pacman-key --lsign-key D5E75EAC51A44715
 
 # 2) Instalar el par personal la primera vez (aún no hay repo configurado)
 #    Descarga desde el navegador (o curl):
-#    https://robert-flo.github.io/omarchy-personal-repo/stable/x86_64/omarchy-4.0.2-101-any.pkg.tar.zst
+#    https://robert-flo.github.io/omarchy-personal-repo/stable/x86_64/omarchy-4.0.2-102-any.pkg.tar.zst
 #    …y su .sig (mismo nombre + .sig), e instala AMBOS a la vez (misma versión, obligatorio):
-sudo pacman -U omarchy-4.0.2-101-any.pkg.tar.zst omarchy-settings-4.0.2-101-any.pkg.tar.zst
+sudo pacman -U omarchy-4.0.2-102-any.pkg.tar.zst omarchy-settings-4.0.2-102-any.pkg.tar.zst
 #    El .sig descargado al lado del .pkg.tar.zst lo verifica pacman automáticamente
 #    (Good signature de D5E75EAC51A44715); no hace falta pasarlo como argumento.
 
@@ -43,7 +43,7 @@ omarchy reinstall-configs
 ## Comprobar que quedó bien
 
 ```bash
-pacman -Q omarchy omarchy-settings      # → omarchy 4.0.2-101 / omarchy-settings 4.0.2-101
+pacman -Q omarchy omarchy-settings      # → omarchy 4.0.2-102 / omarchy-settings 4.0.2-102
 pacman -Q hola-mundo                    # → hola-mundo 0.1.0-2  (instálalo antes si quieres)
 omarchy-debug --no-sudo --print         # sin errores
 ```

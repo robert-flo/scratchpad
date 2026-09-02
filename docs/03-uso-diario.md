@@ -45,7 +45,7 @@ omarchy refresh config hypr/bindings.lua
 ## Comandos útiles para verificar
 
 ```bash
-pacman -Q omarchy omarchy-settings        # versión del par (debe ser la personal, p. ej. 4.0.2-101)
+pacman -Q omarchy omarchy-settings        # versión del par (debe ser la personal, p. ej. 4.0.2-102)
 pacman -Qn                                # lista de paquetes instalados
 omarchy version
 ```

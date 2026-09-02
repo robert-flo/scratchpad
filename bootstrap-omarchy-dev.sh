@@ -291,7 +291,7 @@ echo
 echo "== Estado: máquina en LÍNEA DEV (omarchy update normal no aplica hasta reinstalar el par stock)."
 echo "== Etapa 3 / W7 (release personal): COMPLETADA (run verde 2026-09-01; ver WORKLOG)."
 echo "== Etapa 4 (sombreado): COMPLETADA — el pacman-stable.conf del fork ya trae"
-echo "   [omarchy-personal] ANTES de [omarchy]; par personal en gh-pages (hoy 4.0.2-101)."
+echo "   [omarchy-personal] ANTES de [omarchy]; par personal en gh-pages (hoy 4.0.2-102)."
 echo
 echo "== Consumir el repo personal (máquinas stock, sin el par dev):"
 echo "   Servido por GitHub Pages: https://robert-flo.github.io/omarchy-personal-repo"

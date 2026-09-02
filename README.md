@@ -32,6 +32,9 @@ Todo lo siguiente está **completo y probado end-to-end** en la máquina dev:
 - **Etapa 2 (launchers)** — 60 launchers (39 webapps + 19 TUI/custom + 2 edge) + 41 iconos
   cosechados del sistema anterior a la forma canónica (`applications/`) y publicados
   (commit `8fac9d33`, par 4.0.2-103). Los que ya estaban en upstream no se duplicaron.
+  **Operativos en la máquina dev** (los 78 launchers resuelven sus bins; 12ª parte) y con
+  bootstrap reproducible (`bin/omarchy-personal-bootstrap-launchers`, commit `9cea4bdb`) para
+  dejarlos funcionando en cualquier máquina — ver [`docs/06-launchers.md`](docs/06-launchers.md).
 
 Publicado en <https://robert-flo.github.io/omarchy-personal-repo/stable/x86_64> (firmado con la
 clave GPG dedicada `D5E75EAC51A44715`):
@@ -61,6 +64,7 @@ clave GPG dedicada `D5E75EAC51A44715`):
 | …entender un término | [`GLOSSARY.md`](GLOSSARY.md) |
 | …instalar/actualizar una máquina (cómo, sin porqué) | [`docs/`](docs/) — Índice: [`docs/README.md`](docs/README.md) |
 | …agregar/actualizar una webapp | [`webapp-workflow.md`](webapp-workflow.md) o [`docs/04-webapps.md`](docs/04-webapps.md) |
+| …entender/reproducir los launchers y sus bins | [`docs/06-launchers.md`](docs/06-launchers.md) |
 | …publicar un paquete / republicar el par | `agents_fork.md` **W7** o [`docs/05-mantener.md`](docs/05-mantener.md) |
 | …seguir un release upstream | `agents_fork.md` **W9** + [`docs/05-mantener.md`](docs/05-mantener.md) |
 | …algo falló / un release salió mal / rescatar una máquina | [`RUNBOOK.md`](RUNBOOK.md) |
@@ -95,3 +99,4 @@ clave GPG dedicada `D5E75EAC51A44715`):
 | [`docs/03-uso-diario.md`](docs/03-uso-diario.md) | `omarchy update`, instalar un paquete personal, reconciliar el set, problemas comunes |
 | [`docs/04-webapps.md`](docs/04-webapps.md) | agregar y actualizar tus webapps |
 | [`docs/05-mantener.md`](docs/05-mantener.md) | para el mantenedor: añadir un paquete personal y seguir el release upstream |
+| [`docs/06-launchers.md`](docs/06-launchers.md) | los launchers del fork y el bootstrap reproducible que deja funcionando sus bins |

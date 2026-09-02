@@ -1,7 +1,8 @@
 # 02 — Instalar una máquina nueva
 
 Cómo dejar cualquier máquina (x86_64, instalada con la ISO oficial estable de omarchy.org) en tu
-**sistema personal**. Son 7 pasos; se hacen una sola vez por máquina.
+**sistema personal**. Son 8 pasos; se hacen una sola vez por máquina. (El detalle del *porqué* de
+los launchers está en [`docs/06-launchers.md`](06-launchers.md)).
 
 ## Antes de empezar
 
@@ -36,7 +37,11 @@ omarchy update
 omarchy reinstall pkgs
 
 # 6) [Solo si ya exite el primer usuario o vas a usarlo enseguida]
-#    Materializa las configs del sistema personal sobre tu usuario:
+#    Instala los bins que corren los launchers del fork (CLIs de IA, navegador
+#    Edge, TUI helpers, Hermes, app desktop de OpenCode, ~/src). Idempotente.
+bash <(curl -fsSL https://raw.githubusercontent.com/robert-flo/omarchy/personal/bin/omarchy-personal-bootstrap-launchers)
+
+# 7) Materializa las configs del sistema personal sobre tu usuario:
 omarchy reinstall-configs
 ```
 

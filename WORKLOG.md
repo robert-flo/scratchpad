@@ -23,6 +23,7 @@ invariantes) y [`README.md`](README.md) resume el estado actual. Si algo aquí c
 10. 2026-09-01 (9ª parte) — Revisión L8: endurecimiento de la Action, vigilancia de cadencia, runbook y ADRs.
 11. 2026-09-01 (10ª parte) — Validación L8 con run real (dry_run + publish; bug del guard booleano corregido) + decisión de `hola-mundo`.
 12. 2026-09-01 (11ª parte) — **Etapa 2 / Cosecha de launchers**: 60 `.desktop` + 41 iconos a la forma canónica (`applications/`), publicados en el par 4.0.2-103.
+13. 2026-09-01 (12ª parte) — **Etapa 2 operativa**: bins de los 78 launchers instalados en la máquina dev + bootstrap reproducible idempotente (`bin/omarchy-personal-bootstrap-launchers`).
 
 ---
 
@@ -914,9 +915,96 @@ fork → publicados por la Action → instalados por el paquete).
 
 ### Lo que falta (próximos pasos)
 
-1. `omarchy update` en la máquina dev → par 4.0.2-103 + **materializar los 60 launchers** vía
-   `omarchy-refresh-applications` (los entrega el paquete en `/usr/share/omarchy/applications/`).
-2. Instalar en la máquina dev los bins de los launchers (antigravity, hermes, opencode, omp, qwen,
-   zero, mimo, codex, lazydocker…). Estáticos webapps no requieren nada extra (navegador por defecto).
+1. ✓ `omarchy update` en la máquina dev → par 4.0.2-103 + materializar los 60 launchers vía
+   `omarchy-refresh-applications` (HECHO: dev convergida y 78 launchers en el menú; 11ª parte).
+2. ✓ Instalar en la máquina dev los bins de los launchers — **ver 12ª parte** (HECHO).
 3. Resto de la Etapa 2: personalizaciones de configs (`omarchy reinstall-configs`) y onboarding de
    máquinas reales (Etapa 5).
+
+---
+
+## Sesión 2026-09-01 (12ª parte) — Etapa 2 operativa: bins de los launchers + bootstrap reproducible
+
+### Contexto
+
+El dueño pidió viajar en loop autónomo hasta que **todos los launchers estén operativos en la
+máquina dev, todo esté documentado y sea reproducible en otras computadoras**. En la 11ª parte
+quedaron publicados los 78 launchers (par 4.0.2-103, dev convergida); quedaba instalar los **bins**
+que los `Exec=` corren y empaquetar esa instalación como bootstrap idempotente.
+
+### Investigación (previa a la instalación)
+
+- **Métodos oficiales confirmados**: `mimo` = `curl -fsSL https://mimo.xiaomi.com/install | bash`
+  (deja el bin en `~/.mimocode/bin/mimo` y añade ese path al `~/.bashrc`); `openclaw` =
+  `curl -fsSL ...openclaw.ai/install.sh | bash -s -- --no-prompt --no-onboard` (instala como npm
+  global dentro del node de mise + `openclaw gateway install` para el dashboard `127.0.0.1:18789`);
+  `openclaude`/`zero`/`command-code` = `npm i -g` bajo el node de mise; `qwen` = `mise use -g qwen`;
+  `lyricify` = AUR; `opencode-desktop` = AppImage oficial
+  (`opencode-desktop-linux-x86_64.AppImage`). `spotify-launcher` (repo oficial) NO provee un bin
+  `spotify`, solo `spotify-launcher`.
+- **Patrón canónico del CLI de AI en esta máquina es `mise`**; el wrapper canónico de omarchy
+  (`omarchy-install-hermes-cli --now`) instala hermes via `mise pipx:hermes-agent[extras=all]`.
+- **El launcher Web de Hermes exec `~/.hermes/hermes-agent/venv/bin/hermes dashboard`** (path que
+  posee el paquete `hermes-desktop`); con el CLI no existe ese venv → se hace un **shim** en ese
+  path hacia el wrapper `~/.local/bin/hermes`. `hermes dashboard` levanta el dashboard (puerto
+  9119) y `hermes desktop` la app Electron, ambos como subcomandos del CLI — verificado.
+- Directorio `~/src` (el `cd "$HOME/src"` de los launchers) no existía en dev → lo crea el bootstrap.
+
+### Qué se hizo (orden real)
+
+1. **Sistema (pacman):** `ncdu`, `kitty`, `spotify-launcher` (ya había `dua-cli`/`imv`/`mpv`/`foot`).
+2. **AUR (yay):** `microsoft-edge-stable-bin`, `lyricify`, `spicetify-cli`.
+3. **mise:** `mise use -g qwen`; `mise reshim` (regeneró shims de `openclaw`,`openclaude`,`zero`,
+   `cmd` tras el npm -g). npm bajo el node de mise: `@gitlawb/openclaude`, `@gitlawb/zero`,
+   `command-code`.
+4. **Oficiales:** `mimo` (0.1.13, con wrapper `~/.local/bin/mimo` porque su `~/.mimocode/bin` solo
+   está en PATH del `.bashrc` interactivo), `openclaw` (2026.8.2) + `openclaw gateway install`
+   (servicio de usuario `openclaw-gateway`, dashboard `127.0.0.1:18789` → HTTP 200),
+   `opencode-desktop` AppImage en `~/.local/opt/opencode-desktop/` + wrapper
+   `~/.local/bin/opencode-desktop` (FUSE detectado; `--appimage-version` valida).
+5. **Hermes:** shim del venv (`~/.hermes/hermes-agent/venv/bin/hermes` → wrapper mise pipx);
+   `hermes dashboard` verificado (puerto 9119). `mkdir -p ~/src`.
+6. **Verificación de operatividad:** se extrajeron los `Exec=` únicos de los 78 `.desktop` de
+   `~/.local/share/applications/`; **todos los bins/CLIs resuelven** con `command -v` y `--version`:
+   agy 1.1.24, cmd 1.40.1, zero 0.8.0, qwen 0.22.3, openclaude 0.30.0, opencode 1.18.26,
+   codex-cli 0.152.1, omp 18.1.2, hermes v0.19.0, mimo 0.1.13, openclaw 2026.8.2; toda la línea
+   omarchy (launch-webapp, launch-docker-tui, webapp-handler-*), foot/kitty, edge, lyricify, ncdu,
+   dua, herdr. `omarchy-personal-bootstrap-launchers` re-corrido en dev reporta
+   **"done: every launcher binary resolves."** (idempotente).
+7. **Bootstrap reproducible**: nuevo `bin/omarchy-personal-bootstrap-launchers` en el fork
+   (commit **`9cea4bdb`**, pusheado a `personal`; idempotente; instala sistema+AUR+mise+npm+oficiales+
+   hermes+shim+`~/src`; sweep final con aviso de gaps). **NO se re-liberó el par** (los launchers no
+   cambiaron; el script se obtiene por git). Documentado en `docs/06-launchers.md`.
+8. **Docs**: WORKLOG 12ª parte, `docs/06-launchers.md` (nuevo), `docs/README.md`, `README`,
+   `agents_fork.md` (item 6 + Etapa 2).
+
+### Verificación final
+
+- `hermes dashboard` (9119) y openclaw gateway (18789) responden HTTP 200.
+- Recorrido de Exec: los 78 launchers resuelven su binario (nada MISSING; spotify=spotify-launcher).
+
+### Decisiones registradas (con razón)
+
+| Decisión | Razón |
+|---|---|
+| Mantener los 3 launchers kitty (Hermes TUI, lyricify, ncdu) tal cual | `xdg-terminal-exec` espera un binario; kitty es el patrón RaVN original → el bootstrap instala `kitty`. No se toca el fork |
+| `spotify-launcher` en vez de spotify AUR | Repo oficial, sin rebuild AUR; el `spotify` de los launchers espirituales es lyricify, no hay Exec `spotify` |
+| Shims en `~/.local/bin` (mimo, opencode-desktop) y venv-hermes | El launcher exec nombre liso → debe estar en PATH del escritorio; los bins de instaladores oficiales no quedan en PATH por defecto |
+| Bootstrap en el fork, sin re-release | La fuente es el repo git (obtenible por `curl` raw); añadir el script al paquete exigiría pkgrel y no aporta nada a los launchers |
+| gateway/openclaw y hermes dashboard verificados con HTTP 200 | Operatividad medida = el comando del launcher responde, no solo "existe el bin" |
+
+### Estado actual (inventario)
+
+- `robert-flo/omarchy`: `personal` @ **`9cea4bdb`** (harvest `8fac9d33` + bootstrap `9cea4bdb`).
+  Detrás de `upstream/quattro`.
+- `robert-flo/omarchy-pkgs`: `personal` @ **`d5c435d`** (pin 4.0.2-103), `master` @ `2fa2f65`.
+- Publicado: par **4.0.2-103**. Dev machine: par **4.0.2-103**, **los 78 launchers operativos**
+  (bins resueltos; webapps con Chrome/Edge; gateways/dashboards HTTP 200). Launchers canónicos en
+  el fork: **77** `.desktop` + **60** iconos.
+
+### Lo que falta (próximos pasos)
+
+1. Resto de la Etapa 2: personalizaciones de configs (`omarchy reinstall-configs`).
+2. Etapa 5: onboarding de una segunda máquina real usando el **bootstrap de launchers**
+   (`docs/02` paso 6b/`06-launchers.md`) como parte del procedimiento.
+3. (Opcional) spicetify tematizando Spotify (dependencia instalada, sin aplicar tema).

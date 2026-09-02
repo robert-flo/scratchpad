@@ -72,10 +72,12 @@ El detalle por sesión está en `WORKLOG.md`; el resumen publicado (versiones, r
   3. ~~Etapa 3 / W7 — repo personal~~ **HECHO**: `omarchy-personal-repo` (gh-pages) + Action `release-personal.yml` (run verde inicial `33565145113`).
   4. ~~Etapa 4 — sombreado~~ **HECHO**: `[omarchy-personal]` antes de `[omarchy]` en `default/pacman/pacman-stable.conf` del fork (`1540c220`); par republicado a 4.0.2-100 (run `33571098815`).
   5. ~~Prueba end-to-end en la máquina dev~~ **HECHO** (6ª parte del WORKLOG): instalación desde `[omarchy-personal]`, refresh, `omarchy update -y` RC=0.
-  6. ~~Cosecha de launchers (webapps + TUIs + edge)~~ **HECHO (11ª parte)**: 60 launchers + 41 iconos
-     a la forma canónica (`applications/` + `applications/icons/`), publicado vía Action (par 4.0.2-103).
-     **PENDIENTE:** el resto de personalizaciones de configs (`omarchy reinstall-configs`); onboarding de
-     máquinas reales (Etapa 5); la cadencia W9 ya se practicó manualmente y queda como operación continua.
+6. ~~Cosecha de launchers (webapps + TUIs + edge)~~ **HECHO (11ª parte)**: 60 launchers + 41 iconos
+      a la forma canónica (`applications/` + `applications/icons/`), publicado vía Action (par 4.0.2-103),
+      operativo en la máquina dev + **bootstrap reproducible idempotente** (`bin/omarchy-personal-bootstrap-launchers`,
+      commit `9cea4bdb`, 12ª parte) que instala los bins de los 78 launchers en cualquier máquina.
+      **PENDIENTE:** el resto de personalizaciones de configs (`omarchy reinstall-configs`); onboarding de
+      máquinas reales (Etapa 5); la cadencia W9 ya se practicó manualmente y queda como operación continua.
 
 ---
 
@@ -297,6 +299,8 @@ intervención manual.** Las etapas son acumulativas; cada una cierra con su crit
 - [x] **Launchers (webapps + TUIs + edge)** → portados a `applications/` (60 `.desktop` + 41 iconos),
       commit `8fac9d33` en `personal`, publicado por la Action en el par 4.0.2-103 (11ª parte).
       Nombres normalizados (typos/an + `ai`→`AI`); los ya existentes en upstream no se duplicaron.
+      Operating en dev: los 78 launchers resuelven sus bins vía
+      `bin/omarchy-personal-bootstrap-launchers` (12ª parte; ver [`docs/06-launchers.md`](docs/06-launchers.md)).
 - [ ] Inventariar cada personalización deseada y portarla a su ubicación en la fuente (W1–W6).
 - [ ] Validadas con `omarchy dev pkg-test` + su refresh correspondiente.
 - **Criterio de aceptación:** `omarchy reinstall-configs` + `omarchy reinstall pkgs` reproducen el estado deseado completo.

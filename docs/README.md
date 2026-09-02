@@ -15,6 +15,8 @@ menos de 10 minutos tendrás todo el panorama.
 4. [**04 — Webapps**](04-webapps.md) — agregar, cambiar y quitar tus webapps.
 5. [**05 — Mantener**](05-mantener.md) — para el mantenedor: añadir un paquete personal nuevo y
    seguir el release de Omarchy upstream.
+6. [**06 — Launchers**](06-launchers.md) — los launchers del fork y el bootstrap reproducible que
+   deja funcionando sus bins en cualquier máquina.
 
 ## Ejemplo real: "quiero echar un vistazo"
 

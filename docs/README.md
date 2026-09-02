@@ -19,7 +19,7 @@ menos de 10 minutos tendrás todo el panorama.
 ## Ejemplo real: "quiero echar un vistazo"
 
 ```bash
-pacman -S hola-mundo          # instala el paquete de prueba desde el repo personal
+sudo pacman -S hola-mundo     # instala el paquete de prueba desde el repo personal (con sudo: instalas)
 hola-mundo                    # imprime el mensaje del paquete
 omarchy update                # mantiene TODO tu sistema personal al día
 ```

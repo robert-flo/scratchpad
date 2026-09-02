@@ -17,7 +17,7 @@ comando de mantenimiento que existe.
 ## Instalar un paquete personal nuevo
 
 ```bash
-pacman -S hola-mundo
+sudo pacman -S hola-mundo
 ```
 
 El paquete se resuelve desde el repositorio `[omarchy-personal]`. Instalado una vez, `omarchy

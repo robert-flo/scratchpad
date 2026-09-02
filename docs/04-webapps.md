@@ -43,11 +43,11 @@ git push origin personal
 ```
 
 ```bash
-# 3) Publicar (reprisa el repositorio personal con la Action)
-#    Pregunta qué pkgrel corresponde: el par usa 99 + 1 por cada republicación del mismo
-#    pkgver (hoy 101). Si dudas, mira el valor de la última republicación y suma 1.
+# 3) Publicar (reprisa el repositorio personal con la Action).
+#    No hace falta decirle el pkgrel: la Action lo deriva sola (§5.3 del plan) —
+#    pkgver nuevo → 99; mismo pkgver → última republicación +1 (hoy 101 → 102).
 gh workflow run release-personal.yml -R robert-flo/omarchy-pkgs \
-  --ref personal -f version=v4.0.2 -f pkgrel=101
+  --ref personal -f version=v4.0.2
 ```
 
 ```bash

@@ -8,7 +8,10 @@ nada; **no adivinar procedimientos**.
 **Compañeros de lectura:**
 
 - [`WORKLOG.md`](WORKLOG.md) — la bitácora (qué se hizo y por qué). Este plan es la referencia de **cómo**. Si algo del WORKLOG contradice este archivo, está mal en la bitácora.
-- [`README.md`](README.md) — estado resumido hoy y mapa de todos los documentos.
+- [`README.md`](README.md) — estado resumido hoy y mapa de todos los documentos (fuente única de la tabla de versiones publicadas).
+- [`RUNBOOK.md`](RUNBOOK.md) — guía de fallos y recuperación (modos de fallo, roll-forward, rescate por máquina, checklist de cadencia).
+- [`GLOSSARY.md`](GLOSSARY.md) — definición de los términos usados en toda la documentación.
+- [`decisions/`](decisions/) — registro de decisiones (ADRs), promovidas desde el WORKLOG.
 - [`docs/`](docs/) — documentación para usuario final (el "cómo" sin el "porqué").
 
 ## Índice
@@ -57,7 +60,12 @@ El detalle por sesión está en `WORKLOG.md`; el resumen publicado (versiones, r
 
 - **Etapas 0, 3 (W7) y 4 completas** y probadas end-to-end; **cadencia W9 ejecutada**; la repo
   personal quedó **generalizada a `personal: true`** con el PoC `hola-mundo` instalado y mantenido
-  por `omarchy update`. Par publicado/instalado en dev: **4.0.2-101**; `hola-mundo` **0.1.0-2**.
+  por `omarchy update`. **Versiones publicadas e instaladas: ver la tabla "Estado" de `README.md`
+  (fuente única de estado).**
+- **Operación endurecida (revisión L8, 2026-09-01):** la Action gana un guard fail-fast de rama,
+  `concurrency`, `dry_run` (ensayo sin publicar) y **`pkgrel` autoderivado** (§5.3); la cadencia
+  tiene vigilancia automática (`sync-check.yml` en `omarchy-pkgs`); hay runbook de fallos
+  (`RUNBOOK.md`), glosario (`GLOSSARY.md`) y ADRs (`decisions/`).
 - **Próximos pasos** (orden de ejecución; cada uno cierra con su receta `W#` y su entrada en WORKLOG):
   1. ~~Fork `omacom/omarchy-pkgs`~~ **HECHO** (Etapa 0): `robert-flo/omarchy-pkgs`, clone en `~/Work/omarchy/omarchy-pkgs`, remote `upstream` configurado.
   2. ~~Puntar el dev loop al fork~~ **HECHO** (validado `omarchy dev pkg-test` → `dev.<sha>`): PKGBUILDs del fork por layout + `OMARCHY_UPSTREAM_URL=https://github.com/robert-flo/omarchy.git` (sin ella el pin engine usaría el default `basecamp/omarchy.git`); automatizado en `bootstrap-omarchy-dev.sh`.
@@ -71,6 +79,47 @@ El detalle por sesión está en `WORKLOG.md`; el resumen publicado (versiones, r
 ## 1. Modelo mental de Omarchy upstream (hechos verificados)
 
 Hechos leídos del código; no dan lugar a interpretación.
+
+### 1.0 El pipeline en un vistazo
+
+```text
+               oMACOM/omarchy (upstream, quattro)
+                          │   (W9: fetch + rebase, cadencia)
+                          ▼
+            robert-flo/omarchy  ── RAMA "personal" ──┐
+            (fuente; toda personalización es un        │  pin engine (§1.8):
+            cambio de fuente: applications/, config/,   │  bin/omarchy-pkgs release
+            themes/, bin/, install/, migrations/, …)   │  (lockstep par, pkgrel→1)
+                          │                             │
+                          ▼                             ▼
+                     ╔═══════════════════════════════════════════╗
+                     ║  GitHub Action release-personal.yml        ║
+                     ║  (en robert-flo/omarchy-pkgs)              ║
+                     ║  1. recolecta "personal": true             ║
+                     ║  2. pin del par + pkgrel §5.3 (autoderivado)║
+                     ║  3. guard: par personal >= estable oficial  ║
+                     ║  4. build → sign → promote → update → clean ║
+                     ║  5. push a gh-pages (+ aliases de db)       ║
+                     ╚═══════════════════════════════════════════╝
+                                          │  (commit a gh-pages)
+                                          ▼
+                 robert-flo/omarchy-personal-repo (GitHub Pages, stable)
+                                          │
+                     ┌────────────────────┼────────────────────┐
+                     │                     │                     │
+          [omarchy-personal]      [omarchy] (oficial)     sync-check.yml
+          (sombreado §5.2)        pkgs.omarchy.org        (cron: tag upstream
+          ANTES de [omarchy]      resto del ecosistema    vs pin personal;
+                     │                                      abre/cierra issue)
+                     ▼
+          vercmp: gana el par personal si pkgver >= (y pkgrel alto §5.3)
+                     │
+                     ▼
+          omarchy update → cada máquina idéntica y personal (sin tocar nada)
+```
+
+Trazar un paquete personal: `personal: true` en `.omarchy/package.json` → el repo personal lo
+publica (W7) → la máquina lo resuelve de `[omarchy-personal]` → `omarchy update` lo mantiene.
 
 ### 1.1 Dos repositorios, dos paquetes
 
@@ -232,12 +281,13 @@ intervención manual.** Las etapas son acumulativas; cada una cierra con su crit
 - **Criterio de aceptación ✅:** `pacman -Q omarchy-dev omarchy-settings-dev` → `dev.<sha>` y la
   máquina sigue funcional (validado: `dev.0e6c11d5-1`).
 
-### Etapa 1 — Probar el ciclo completo con una webapp mínima
+### Etapa 1 — Probar el ciclo completo con una webapp mínima ✅
 
-- [ ] Agregar una webapp de prueba al fork (receta W1) → `omarchy dev pkg-test` →
+- [x] Agregar una webapp de prueba al fork (receta W1) → `omarchy dev pkg-test` →
       `omarchy-refresh-applications`.
-- **Criterio de aceptación:** aparece en el launcher (`Super+Space`) y abre en ventana webapp frameless.
-- *(De facto superado por el POC Xataka; queda formalizar como hito si se quiere.)*
+- **Criterio de aceptación ✅:** aparece en el launcher (`Super+Space`) y abre en ventana webapp frameless.
+- *(Validado de facto por el POC Xataka — commit `0deee8d8`, sesión 2026-08-30: la webapp está en el
+  fork y aparece en el launcher. Hito cerrado con la Etapa 0.)*
 
 ### Etapa 2 — Cosecha de personalizaciones
 
@@ -281,13 +331,15 @@ Replica la maquinaria de upstream corriendo entera en una Action; solo cambia el
 - [ ] (Opcional) Comando de provisioning tipo `bin/omarchy-install-*` que automatice los pasos 2–4.
 - **Criterio de aceptación:** dos máquinas convergen al mismo estado y `omarchy update` no reporta diferencias de personalización.
 
-### Etapa 6 — Cadencia de sync con upstream y operación ✅ (forma manual)
+### Etapa 6 — Cadencia de sync con upstream y operación ✅
 
 - [x] Procedimiento de sync (W9) **practicado manualmente**: fetch upstream → rebase → sync de tags
       al fork → re-dispatch de la Action (guard §5.3 incluido) → `omarchy update` en máquinas;
       ciclo verificado en la máquina dev (4.0.2-100 → 4.0.2-101, run `33579948670`).
 - [x] Guard de versión §5.3 como paso de la Action (aborta si el par personal quedó detrás del stable oficial).
-- [ ] Checklist post-sync formalizado como documento (flujo en WORKLOG 7ª parte).
+- [x] Checklist post-sync formalizado (RUNBOOK §4.1 + `docs/05-mantener.md`) y **vigilancia
+      automática de cadencia**: `sync-check.yml` (cron en `omarchy-pkgs`) abre/cierra un issue
+      `[Cadencia]` si el tag upstream pasa al pin personal (RUNBOOK F4).
 - **Criterio de aceptación:** a lo largo de 2 ciclos de release upstream, las máquinas se mantienen personales y al día.
 
 ### Etapa 7 — Camino a contribuir
@@ -398,9 +450,11 @@ secrets `GPG_PRIVATE_KEY`, `GPG_PASSPHRASE="unused"` y `SSH_DEPLOY_KEY` (deploy 
 commitea en la rama `personal` **y una copia de registro en `master`** (GitHub exige el workflow en
 la rama default para `workflow_dispatch` por API).
 
-> **CRÍTICO — dispatch SIEMPRE con `--ref personal`:** sin él GitHub usa el workflow de la rama por
-> defecto (`master`), que es la copia de registro SIN la generalización (lo demostró el run
-> `33582420572`, que republicó el par sin `hola-mundo`).
+> **CRÍTICO — dispatch SIEMPRE con `--ref personal`.** Desde el endurecimiento L8 la Action tiene
+> un **guard fail-fast**: si `github.ref != refs/heads/personal` aborta el run en el primer paso
+> antes de tocar nada (por eso la copia en `master` es puro registro, idéntica). Histórico: sin
+> `--ref`, GitHub usaba el workflow de `master` (copia sin la generalización) y el run
+> `33582420572` republicó el par sin `hola-mundo`.
 
 **El modelo:** la Action replica el pipeline de upstream de punta a punta (`bin/repo`) y su paso
 final reemplaza `sync-repo`/rclone por un commit+push al branch `gh-pages`. El dueño YA NO publica a mano.
@@ -411,8 +465,13 @@ final reemplaza `sync-repo`/rclone por un commit+push al branch `gh-pages`. El d
 2. **Pin del par en lockstep** dentro de **`archlinux:base-devel`** como **no-root** (el runner no
    trae `vercmp`/`makepkg`; makepkg rechaza root): `./bin/omarchy-pkgs release <vX.Y.Z> --commit <sha>
    --no-push --yes` por un usuario `builder` (`su builder -c`, checkout montado, `chmod -R a+rwX /pkgs`,
-   `safe.directory`). Re-aplicar la **regla §5.3** (`pkgrel=99` + incremento por republicación) **solo
-   al subconjunto `pinned`** (el par) y commitear el pin a `personal`.
+   `safe.directory`). El engine resetea `pkgrel` a 1.
+   - **`pkgrel` autoderivado (§5.3)** entre el pin y el build: la Action lee el estado previo
+     commitado del PKGBUILD del par (`pkgver`/`pkgrel`/`_commit`) y aplica — `pkgver` nuevo → `99`;
+     mismo `pkgver` → última republicada +1. Aplicado SOLO al subconjunto `pinned` (el par); los
+     paquetes genéricos conservan el `pkgrel` de su PKGBUILD. Override manual: input opcional `pkgrel`.
+   - El **commit del pin y su push a `personal`** están gateados por `dry_run`: con
+     `dry_run=true` se hace TODO menos publicar (ni pin commitado, ni push a `gh-pages`).
 3. **Guard §5.3** antes de buildar: `vercmp` (contenedor Arch) del pkgver+pkgrel del PKGBUILD contra
    el oficial actual en `pkgs.omarchy.org/stable/x86_64/omarchy.db.tar.zst`.
 4. **Recolección del conjunto `personal: true`** y **Build** con imagen `MIRROR=stable`:
@@ -446,14 +505,26 @@ final reemplaza `sync-repo`/rclone por un commit+push al branch `gh-pages`. El d
    desde el árbol publicado (`ls repo/stable/x86_64/<pkg>*.pkg.tar.zst`), NO desde el input
    `version` (que lleva `v`, y el filename no). Dar margen amplio a que Pages deploye (60×20 s si hace falta).
 
-**Trigger:** `workflow_dispatch` (manual), atado a la cadencia de sync (W9). Re-publicación típica:
+**Trigger:** `workflow_dispatch` (manual), atado a la cadencia de sync (W9). Re-publicación típica
+(el `pkgrel` NO se pasa a mano desde el endurecimiento L8: lo deriva la Action):
 
 ```bash
 gh workflow run release-personal.yml -R robert-flo/omarchy-pkgs \
-  --ref personal -f version=v4.0.2 -f pkgrel=101
+  --ref personal -f version=v4.0.2
 ```
 
-> ⚠️ `pkgrel` (§5.3): `99` + 1 por cada republicación del **mismo** `pkgver` (99→100→101…). Aplicado
+Variantes:
+
+- Ensayo sin publicar nada (build + sign + validación local; ni pin en `personal` ni push a
+  `gh-pages`): añade `-f dry_run=true`.
+- Override de emergencia del pkgrel del par: añade `-f pkgrel=<n>`.
+- Dos dispatches simultáneos entran en cola (grupo de concurrency `release-personal`), nunca
+  corren intercalados.
+- La vigilancia de cadencia (B2) corre aparte: `sync-check.yml` (cron diario) compara el tag
+  upstream con el pin y abre/cierra un issue `[Cadencia]` (RUNBOOK F4).
+
+> El `pkgrel` (§5.3): base `99` por `pkgver` nuevo, +1 por cada republicación del **mismo**
+> `pkgver` (99→100→101…). Autoderivado por la Action a partir del estado commitado del par; aplicado
 > solo al par (subconjunto `pinned`); un paquete genérico usa el pkgrel de su PKGBUILD.
 
 **Ciclo de vida de un paquete personal (8ª parte — qué publica y cómo llega a las máquinas):**
@@ -557,11 +628,14 @@ el par personal queda **por detrás** en versión, `omarchy update` instala el o
 personalizaciones desaparecen** (el paquete oficial no contiene tus archivos). Por eso:
 
 - `pkgver` personal = al tag upstream base de la rama personal (arriba de él, nunca abajo); lo fija el pin engine en lockstep (W7).
-- `pkgrel` personal = **base alta** (p. ej. `99`) y se **incrementa en cada republicación del mismo
+- `pkgrel` personal = **base alta** (`99`) y se **incrementa en cada republicación del mismo
   `pkgver`** (99, 100, 101…), porque:
   - a mismo `pkgver` el pkgrel alto gana (oficial `4.0.1-1` vs personal `4.0.1-99` → gana personal), y
   - el build del pipeline decide "needs build" por diferencia de versión: un cambio de personalización
     con el mismo `pkgver`-`pkgrel` NO se reconstruiría.
+  - **Autoderivación (L8):** la Action lo deriva sola — lee el estado previo commitado del par y
+    aplica `pkgrel = 99` si el `pkgver` es nuevo o `última + 1` si es el mismo (inputs: `pkgrel`
+    opcional como override; ADR-004).
 - **Recuperación automática:** si alguna vez las máquinas quedan en el par oficial (lag), al
   republicar el personal con `pkgver >=` y `pkgrel` creciente, pacman las devuelve al par personal en
   el próximo `omarchy update`. La única pérdida real es la ventana entre release oficial y
@@ -606,6 +680,9 @@ personalizaciones desaparecen** (el paquete oficial no contiene tus archivos). P
 - No omitir el guard de versión (§5.3) en la publicación (en operación lo impone la Action, W7 paso 3).
 - No reintroducir el flujo de generación de webapps del Omarchy 3 (los `.desktop` estáticos son el mecanismo actual).
 - No usar `omarchy-webapp-install` interactivo como fuente de verdad de lo reproducible; solo como herramienta puntual dev.
+- **Nunca commitear claves privadas** (GPG privada, `SSH_PRIVATE_KEY`/deploy key): el proyecto vive
+  en repos **públicos**; las claves privadas solo existen como secrets de `omarchy-pkgs` y la
+  pública en `keys/` (ADR-006). Repo con clave privada commiteada = incidente de seguridad (RUNBOOK F6).
 - No "arreglar" `bin/`/`build/` de `omarchy-pkgs` por conveniencia: las únicas desviaciones de la
   maquinaria son el Dockerfile (deps oficiales, §1.8) y la entrega final a `gh-pages` (W7 paso 7); el
   resto del pipeline debe quedar idéntico a upstream para poder rebasear y contribuir.
@@ -629,4 +706,5 @@ personalizaciones desaparecen** (el paquete oficial no contiene tus archivos). P
   - `bin/omarchy-pkgs` — pin engine del par (`release --no-push`, `OMARCHY_UPSTREAM_URL`).
   - `build/Dockerfile` — imagen `omarchy-pkg-builder:latest-<arch>-<mirror>` (única edición permitida: mantener `[omarchy]` oficial para deps, §1.8).
   - `.github/workflows/{test,sync-aur,sync-upstream,sync-rebuilds}.yml` — CI de upstream a replicar.
-  - `.github/workflows/release-personal.yml` — nuestra Action de release (W7).
+  - `.github/workflows/release-personal.yml` — nuestra Action de release (W7; endurecida L8).
+  - `.github/workflows/sync-check.yml` — vigilancia de cadencia (cron: tag upstream vs pin; abre/cierra issue `[Cadencia]`).

@@ -7,15 +7,20 @@ invariantes) y [`README.md`](README.md) resume el estado actual. Si algo aquí c
 
 ## Índice de sesiones
 
-1. [2026-08-30](#sesión-2026-08-30) — Bootstrap del fork y primer POC: webapp Xataka.
-2. [2026-09-01 — Sesión](#sesión-2026-09-01) — Fork de `omarchy-pkgs` + bootstrap reproducible (Etapa 0 completa).
-3. [2026-09-01 (2ª parte)](#sesión-2026-09-01-2ª-parte) — Xataka no aparecía: `omarchy update` pisa el par dev (lección aprendida).
-4. [2026-09-01 (3ª parte)](#sesión-2026-09-01-3ª-parte) — Criterio de aceptación Etapa 0 + dev loop al fork.
-5. [2026-09-01 (4ª parte)](#sesión-2026-09-01-4ª-parte) — **Etapa 3 / W7 completa**: repo personal en GitHub Pages.
-6. [2026-09-01 (5ª parte)](#sesión-2026-09-01-5ª-parte) — **Etapa 4 completa**: sombreado `[omarchy-personal]`.
-7. [2026-09-01 (6ª parte)](#sesión-2026-09-01-6ª-parte) — Prueba END-TO-END en la máquina dev (PASA).
-8. [2026-09-01 (7ª parte)](#sesión-2026-09-01-7ª-parte) — Cadencia W9 ejecutada (rebase + re-pin 4.0.2-101).
-9. [2026-09-01 (8ª parte)](#sesión-2026-09-01-8ª-parte) — Repo personal generalizada: paquete propio `hola-mundo` vía `omarchy update`.
+> Los enlaces de salto se eliminaron el 2026-09-01: los slugs parciales no coinciden con los
+> anchors que genera GitHub (el índice saltaba al primer uso fallido). Navega con `Ctrl+F` sobre
+> el título completo de la sesión, o con los h2 que siguen.
+
+1. 2026-08-30 — Bootstrap del fork y primer POC: webapp Xataka.
+2. 2026-09-01 — Fork de `omarchy-pkgs` + bootstrap reproducible (Etapa 0 completa).
+3. 2026-09-01 (2ª parte) — Xataka no aparecía: `omarchy update` pisa el par dev (lección aprendida).
+4. 2026-09-01 (3ª parte) — Criterio de aceptación Etapa 0 + dev loop al fork.
+5. 2026-09-01 (4ª parte) — **Etapa 3 / W7 completa**: repo personal en GitHub Pages.
+6. 2026-09-01 (5ª parte) — **Etapa 4 completa**: sombreado `[omarchy-personal]`.
+7. 2026-09-01 (6ª parte) — Prueba END-TO-END en la máquina dev (PASA).
+8. 2026-09-01 (7ª parte) — Cadencia W9 ejecutada (rebase + re-pin 4.0.2-101).
+9. 2026-09-01 (8ª parte) — Repo personal generalizada: paquete propio `hola-mundo` vía `omarchy update`.
+10. 2026-09-01 (9ª parte) — Revisión L8: endurecimiento de la Action, vigilancia de cadencia, runbook y ADRs.
 
 ---
 
@@ -674,3 +679,89 @@ pkgbuild personalizados". Se pidió investigar primero cómo lo hace upstream.
    onboarding de futuras máquinas lo instale desde el inicio, como hace upstream con los suyos).
    O queda solo como PoC de mecanismo y se retira.
 3. Iterar webapps del dueño (sigue pendiente del hito principal).
+
+---
+
+## Sesión 2026-09-01 (9ª parte) — Revisión L8: endurecer la operación
+
+### Contexto
+
+Tras cerrar la 8ª parte (repo generalizada + PoC instalado), el dueño pidió una **revisión crítica**
+del proyecto "como haría un ingeniero L8 revisando un PR para una app en producción con 100k
+usuarios". Veredicto: **Request changes**, con hallazgos B (bloqueantes), M (mayor), S (seguridad)
+y N (nits). Esta sesión implementa **todas** las recomendaciones.
+
+### Qué se hizo (orden real)
+
+**A. `omarchy-pkgs` — Action endurecida (B3) + vigilancia de cadencia (B2).**
+
+1. `release-personal.yml` (rama `personal`, commit `c929193`):
+   - **Guard fail-fast de rama**: aborta si `github.ref != refs/heads/personal` (el incidente del
+     dispatch sin `--ref`, run `33582420572`, ya no puede dañar: el guard corre antes de todo paso
+     que escriba).
+   - **`pkgrel` autoderivado (§5.3)**: se lee el estado previo commitado del PKGBUILD del par antes
+     del pin (`PRE_PKGVER`/`PRE_PKGREL`) y tras el pin engine se aplica: `pkgver` nuevo → `99`;
+     mismo `pkgver` → `última + 1`. El input `pkgrel` queda como **override opcional** (emergencias).
+     Revision: 4.0.2-101 estaba commitado → una futura república del mismo pkgver derivará 102 solo.
+   - **`dry_run`** (boolean): ensayo completo sin publicar (ni commit del pin a `personal`, ni push
+     a `gh-pages`); el flujo normal valida en Pages, el dry_run valida el árbol local.
+   - **`concurrency`** (group `release-personal`, `cancel-in-progress: false`): dos dispatches salen
+     en cola, nunca intercalados sobre el mismo destino.
+   - Copia de registro idéntica en `master` (commit `281c7d4`).
+2. **`sync-check.yml`** (nuevo, B2): cron diario (06:30 UTC) + dispatch manual. Compara el tag más
+   reciente de `omacom/omarchy` (`git ls-remote`, `sort -V`) con el `pkgver` pineado en `personal`;
+   si el pin queda atrás abre un issue `[Cadencia]...`, y si vuelve a estar en cadencia lo cierra.
+   Registrado en `personal` + `master` (los `schedule` exigen estar en la rama default; siempre hace
+   checkout explícito de `personal`).
+
+**B. Scratchpad — documentación operativa.**
+
+3. **`RUNBOOK.md`** (B1): estrategia de rollback declarada (**roll-forward**: `clean` poda versiones
+   viejas, el repo no "despublica"; reparar = republicar con `pkgrel+1` o re-pin), 8 modos de fallo
+   conocidos con respuesta (dispatch equivocado, pkgrel mal derivado, publicación corrupta, lag de
+   cadencia, TLS transitorio, rotación de claves, rescate por máquina, quirk sudo), operación
+   preventiva (reherso + checklist de cadencia + vigilancia) y fuentes.
+4. **`GLOSSARY.md`** (M4): términos del proyecto en tabla.
+5. **`decisions/`** (M3 + S1 + S3): promovidas las "Decisiones registradas" del WORKLOG a 7 ADRs
+   (hosting, canal estable, sombreado parcial, regla §5.3 con la mecánica autoderivada, `personal: true`,
+   claves/rotación/DR, y **entorno de build**: se declara `archlinux:base-devel` rolling a propósito,
+   con el pin a digest documentado como acción de seguimiento si se exige reproducibilidad).
+6. **README**: banner de repo público (nunca commitear claves privadas), tabla de rutas "quiero X → leo Y",
+   mapa de docs ampliado, y nota de que la tabla de versiones es la **fuente única de estado**.
+7. **`agents_fork.md`**: diagrama ASCII del pipeline (§1.0), Etapa 1 ✅ (POC Xataka) y Etapa 6 ✅
+   (checklist en RUNBOOK + vigilancia automática), W7 actualizado (guard/dry_run/pkgrel auto),
+   §5.3 con la autoderivación, §7.2 con "nunca commitear claves privadas".
+8. **Nits (N1–N3)**: sudo consistente en `docs/` (pacman -S requiere sudo), §explica el `.sig`
+   contiguo en `docs/02` (pacman lo verifica solo), índice del WORKLOG sin anchors rotos (eliminados
+   en esta sesión, ver nota al inicio del índice).
+9. **Comandos de dispatch** actualizados en `docs/04-webapps.md`, `docs/05-mantener.md`,
+   `agents_fork.md` W7 y `bootstrap-omarchy-dev.sh`: ya no se pasa `-f pkgrel` (autoderivado);
+   se menciona `-f dry_run=true`.
+
+### Decisiones registradas (con razón)
+
+| Decisión | Razón |
+|---|---|
+| Roll-forward como única estrategia de rollback del repo | `clean` poda versiones viejas en Pages; no hay "despublicar" a una versión anterior; republicar con pkgrel+1 repara y sigue siendo barato |
+| `pkgrel` autoderivado (opcional override manual) | Elimina el paso manual que ya dio pie al run `33582420572`; la Action lee el estado commitado del par (mismo pkgver → +1, pkgver nuevo → 99) |
+| `dry_run` para ensayar sin publicar | Validar antes de tocar nada remoto (reduce la ventana "publica y luego valida") |
+| Guard fail-fast de rama | La copia de `master` es solo registro (requisito GitHub del dispatch por API); disparar desde ahí no puede hacer daño |
+| Vigilancia de cadencia vía cron + issue | El guard §5.3 solo actúa al DISPARAR; el cron avisa si upstream pasa al pin y la personalización se quedaría atrás (pérdida silenciosa por vercmp) |
+| Entorno de build rolling declarado (no pin a digest) | Imagen `archlinux:base-devel` mutable, riesgo asumido (1-2 máquinas controladas); pin-digest documentado como follow-up si hace falta reproducibilidad (ADR-007) |
+| Índice del WORKLOG sin hipervínculos de salto | Los slugs parciales nunca coinciden con los anchors que genera GitHub; N2 |
+
+### Estado actual (inventario)
+
+- `robert-flo/omarchy-pkgs`: `personal` @ **`c929193`** (Action endurecida + sync-check), `master` @
+  **`281c7d4`** (copia de registro idéntica). Workflows `release-personal.yml` y `sync-check.yml`
+  verificados byte-idénticos entre ramas.
+- Scratchpad: `README.md`, `agents_fork.md`, `docs/*`, `WORKLOG.md` (¡esta sesión!), `RUNBOOK.md`,
+  `GLOSSARY.md` (nuevos), `decisions/` (7 ADRs, nuevos), `bootstrap-omarchy-dev.sh` actualizado.
+- Repo publicado sin cambios (nada se republicó en esta sesión: el par sigue 4.0.2-101).
+
+### Lo que falta (próximos pasos)
+
+1. Probar el flujo endurecido en un run real de la Action (p. ej. la habitual república con una
+   webapp; esperado: pkgrel autoderivado 101→102).
+2. (L8) Decisión no tomada todavía: `hola-mundo` en `omarchy-base.packages` o retirarlo.
+3. Siguiente hito de producto: iterar las ~55 webapps y el onboarding de máquinas (Etapa 5).

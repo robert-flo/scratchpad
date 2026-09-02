@@ -53,5 +53,5 @@ ahí la verificación es automática.
 
 **La única regla de oro:** un paquete personal que no está instalado en una máquina, `omarchy
 update` **no lo instala** (solo actualiza lo que ya existe). Cada paquete personal nuevo se instala
-**una sola vez** con `pacman -S <paquete>`; de ahí en adelante se mantiene solo. Ver el documento
+**una sola vez** con `sudo pacman -S <paquete>`; de ahí en adelante se mantiene solo. Ver el documento
 **[03 — Uso diario](03-uso-diario.md)**.

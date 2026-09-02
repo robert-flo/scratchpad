@@ -21,8 +21,10 @@ sudo pacman-key --lsign-key D5E75EAC51A44715
 # 2) Instalar el par personal la primera vez (aún no hay repo configurado)
 #    Descarga desde el navegador (o curl):
 #    https://robert-flo.github.io/omarchy-personal-repo/stable/x86_64/omarchy-4.0.2-101-any.pkg.tar.zst
-#    …y su .sig, e instala AMBOS a la vez (misma versión, obligatorio):
+#    …y su .sig (mismo nombre + .sig), e instala AMBOS a la vez (misma versión, obligatorio):
 sudo pacman -U omarchy-4.0.2-101-any.pkg.tar.zst omarchy-settings-4.0.2-101-any.pkg.tar.zst
+#    El .sig descargado al lado del .pkg.tar.zst lo verifica pacman automáticamente
+#    (Good signature de D5E75EAC51A44715); no hace falta pasarlo como argumento.
 
 # 3) Escribir el pacman.conf del sistema personal (ya trae el repo personal ANTES del oficial)
 omarchy refresh pacman

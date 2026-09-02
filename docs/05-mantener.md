@@ -8,6 +8,8 @@ máquinas.
 > **mismo `pkgver` que el upstream base, `pkgrel` siempre alto y creciente** (99, 100, 101…).
 > Eso garantiza que tus versiones le ganen a las oficiales y `omarchy update` nunca baje al par
 > oficial (que no tendría tus personalizaciones).
+> Desde 2026-09-01 la Action **deriva el `pkgrel` sola** (§5.3 del plan): pkgver nuevo → 99;
+> mismo pkgver → última republicación +1. Tú solo pasas la `version`.
 
 ## Añadir un paquete personal nuevo
 
@@ -38,9 +40,9 @@ git push origin personal
 ```
 
 ```bash
-# 3) Publicar
+# 3) Publicar (el pkgrel del par lo deriva sola la Action; SIEMPRE --ref personal)
 gh workflow run release-personal.yml -R robert-flo/omarchy-pkgs \
-  --ref personal -f version=v4.0.2 -f pkgrel=101
+  --ref personal -f version=v4.0.2
 ```
 
 ```bash
@@ -64,9 +66,10 @@ Detalles prácticos de un PKGBUILD personal (lo visto con `hola-mundo`):
 Cada vez que hagas un cambio de fuente (webapp, config, tema, comando, paquete), publica y actualiza:
 
 ```bash
-# Publicar (en ~/Work/omarchy/omarchy-pkgs, rama personal; SIEMPRE --ref personal)
+# Publicar (en ~/Work/omarchy/omarchy-pkgs, rama personal; SIEMPRE --ref personal;
+# el pkgrel del par se deriva solo)
 gh workflow run release-personal.yml -R robert-flo/omarchy-pkgs \
-  --ref personal -f version=v4.0.2 -f pkgrel=101
+  --ref personal -f version=v4.0.2
 
 # Esperar a que termine (unos minutos) y verificar la publicación:
 gh run watch --exit-status
@@ -87,9 +90,10 @@ git push origin vX.Y.Z             # sincroniza el tag de la versión al fork
 ```
 
 ```bash
-# En ~/Work/omarchy/omarchy-pkgs: publicar con el pkgver del tag nuevo y pkgrel=99+1…
+# En ~/Work/omarchy/omarchy-pkgs: publicar con el pkgver del tag nuevo (el pkgrel se
+# deriva solo: pkgver nuevo → base 99, por encima del oficial)
 gh workflow run release-personal.yml -R robert-flo/omarchy-pkgs \
-  --ref personal -f version=vX.Y.Z -f pkgrel=101
+  --ref personal -f version=vX.Y.Z
 ```
 
 …y en cada máquina `omarchy update`.
@@ -114,5 +118,5 @@ pacman -Q omarchy omarchy-settings
 1. [ ] `git fetch upstream` + rebase (sin conflictos, o resueltos).
 2. [ ] `./test/all` pasa (salvo tests ambientales).
 3. [ ] `git push --force-with-lease origin personal` + tag sync.
-4. [ ] Dispatch de la Action **con `--ref personal`** y pkgver/pkgrel correctos; el run acaba verde.
+4. [ ] Dispatch de la Action **con `--ref personal`** y el pkgver del tag nuevo (pkgrel autoderivado); el run acaba verde.
 5. [ ] `omarchy update` en cada máquina llega a la versión personal nueva.

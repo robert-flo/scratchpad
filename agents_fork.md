@@ -658,7 +658,10 @@ personalizaciones desaparecen** (el paquete oficial no contiene tus archivos). P
 - Cuántas máquinas y si serán todas x86_64 (se asume x86_64; aarch64 posible con el mismo flujo pero build más lento y QEMU).
 - Convención de commits personales (§7.1) a fijar como práctica (prefijo `personal: ` ya en uso).
 - Decidir si `agents_fork.md` se mantiene fuera del árbol que se rebasea contra upstream (recomendación: mantenerlo fuera de git del fork o en un repo de notas privado). Aquí vive en el repo de notas, sin commitear en el fork.
-- (8ª parte) Decidir si `hola-mundo` (PoC) se retira o pasa a `omarchy-base.packages` del fork para onboarding.
+- **(8ª parte) `hola-mundo` (PoC) — DECIDIDO (10ª parte): se conserva como paquete ejemplo en el
+  repositorio (no se retira) y NO entra en `omarchy-base.packages` del fork.** Es la muestra de
+  "cómo se hace un paquete personal"; solo se instala (una vez, con `pacman -S`) en máquinas que
+  quieran el ejemplo.
 
 ---
 

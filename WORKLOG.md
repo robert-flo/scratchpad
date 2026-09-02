@@ -21,6 +21,7 @@ invariantes) y [`README.md`](README.md) resume el estado actual. Si algo aquí c
 8. 2026-09-01 (7ª parte) — Cadencia W9 ejecutada (rebase + re-pin 4.0.2-101).
 9. 2026-09-01 (8ª parte) — Repo personal generalizada: paquete propio `hola-mundo` vía `omarchy update`.
 10. 2026-09-01 (9ª parte) — Revisión L8: endurecimiento de la Action, vigilancia de cadencia, runbook y ADRs.
+11. 2026-09-01 (10ª parte) — Validación L8 con run real (dry_run + publish; bug del guard booleano corregido) + decisión de `hola-mundo`.
 
 ---
 
@@ -675,9 +676,8 @@ pkgbuild personalizados". Se pidió investigar primero cómo lo hace upstream.
 
 1. (Opcional) Script/checklist de la cadencia personal: añadir un PKGBUILD personal =
    mkdir pkgbuilds/<pkg> + PKGBUILD + `.omarchy/package.json` con `personal: true` + dispatch.
-2. Decidir si `hola-mundo` se envía también a `omarchy-base.packages` del fork fuente (para que el
-   onboarding de futuras máquinas lo instale desde el inicio, como hace upstream con los suyos).
-   O queda solo como PoC de mecanismo y se retira.
+2. ~~Decidir si `hola-mundo` se envía también a `omarchy-base.packages`~~ **DECIDIDO (10ª parte):
+   conservarlo como paquete ejemplo (no se retira), NO añadirlo a `omarchy-base.packages`**.
 3. Iterar webapps del dueño (sigue pendiente del hito principal).
 
 ---
@@ -761,7 +761,71 @@ y N (nits). Esta sesión implementa **todas** las recomendaciones.
 
 ### Lo que falta (próximos pasos)
 
-1. Probar el flujo endurecido en un run real de la Action (p. ej. la habitual república con una
-   webapp; esperado: pkgrel autoderivado 101→102).
-2. (L8) Decisión no tomada todavía: `hola-mundo` en `omarchy-base.packages` o retirarlo.
+1. ~~Probar el flujo endurecido en un run real de la Action (p. ej. la habitual república con una
+   webapp; esperado: pkgrel autoderivado 101→102).~~ **EJECUTADO en la 10ª parte**: dry_run + run
+   real, par republicado a 4.0.2-102 con firma verificada; se detectó y corrigió el guard
+   booleano de `dry_run`.
+2. ~~(L8) Decisión no tomada todavía: `hola-mundo` en `omarchy-base.packages` o retirarlo.~~
+   **DECIDIDO (10ª parte): conservarlo como paquete ejemplo (no se retira), NO añadirlo a
+   `omarchy-base.packages`.**
 3. Siguiente hito de producto: iterar las ~55 webapps y el onboarding de máquinas (Etapa 5).
+
+---
+
+## Sesión 2026-09-01 (10ª parte) — Validación del flujo L8 con run real + decisión de `hola-mundo`
+
+### Contexto
+
+El dueño aprobó validar la Action endurecida (L8) con un **run real** y decidió el destino de
+`hola-mundo`: **conservarlo como paquete ejemplo en el repositorio (no se retira) y NO añadirlo a
+`omarchy-base.packages`** (sería solo "cómo se hace un paquete personal"; no debe forzarse en onboarding).
+
+### Qué se hizo (orden real)
+
+1. **Decisión `hola-mundo` registrada** en `agents_fork.md` §6 (item de la 8ª parte → DECIDIDO) y
+   en `WORKLOG.md` 9ª parte "Lo que falta" item 2.
+2. **Dry_run de la Action endurecida** (`33588143226`, `-f version=v4.0.2 -f dry_run=true`,
+   `--ref personal`): éxito; pkgrel autoderivado **101 → 102**; todos los pasos de escritura
+   (`Commit del pin`, `Publicar a gh-pages`, `Validar publ. en Pages`) saltados como corresponde.
+3. **BUG detectado por el run real** (`33588412168`): pese a `conclusion=success`, los pasos
+   `Commit del pin`, `Publicar a gh-pages` y `Validar publ. en Pages` quedaron **`skipped`**:
+   `if: ${{ inputs.dry_run == 'false' }}` **nunca se cumple** cuando `dry_run` es un booleano
+   `false` (GitHub compara por truthiness de cadena: `'false'` no vacío ≡ true ⇒ `false == 'false'`
+   es falso). El `dry_run=true` del ensayo sí funcionaba (`== 'true'` es la comparación correcta).
+4. **Fix**: `== 'false'` → `if: ${{ !inputs.dry_run }}` (x3: pin, publish, validate-Pages) y
+   `== 'true'` → `if: ${{ inputs.dry_run }}` (x1: validación del árbol local). Push `personal` @
+   **`c5d2cf3`** y copia de registro `master` @ **`2fa2f65`**.
+5. **Dry_run post-fix** (`33588803480`): éxito; ahora sí corre `Validar arbol local (dry-run,
+   nada publicado)` → log `"OK (dry-run): arbol validado. No se commiteo pin ni se publico a gh-pages."`.
+6. **Run real final** (`33589089108`): SUCCESS con `Commit del pin` ✓, `Publicar a gh-pages` ✓ y
+   `Validar publicacion en GitHub Pages` ✓. Pin commitado en `personal` (`4c349ca`
+   "personal: pin v4.0.2-102 @ c5d2cf3"): `pkgrel=102`.
+7. **Verificación end-to-end**:
+   - Pages sirve `omarchy-4.0.2-102-any.pkg.tar.zst` (+sig) y `omarchy-settings-4.0.2-102` (+sig); db
+     `omarchy.db`/`omarchy-personal.db` (+sig) listan **`omarchy 4.0.2-102`** y **`omarchy-settings
+     4.0.2-102`**; alias servidos por HTTP 200.
+   - **Firma GPG verificada** del par 4.0.2-102 contra la clave pública del repo
+     (`D5E75EAC51A44715`): `Good signature`.
+   - Dev machine sigue en 4.0.2-101; convergerá con el próximo `omarchy update` (no se tocó el sistema).
+
+### Decisiones registradas (con razón)
+
+| Decisión | Razón |
+|---|---|
+| `hola-mundo` se conserva como paquete ejemplo, sin entrar en `omarchy-base.packages` | Es la muestra de "cómo se hace un paquete personal"; forzarlo en onboarding no aporta valor y contamina el inventario base |
+| Guard booleano con `!inputs.dry_run` (no `== 'false'`) | La comparación `booleano == 'false'` en GitHub Actions nunca es verdadera (task `skipped` ⇒ publica sin validar en falso positivo); `!x` evalúa por valor real del booleano |
+| Validar con run real además del dry_run | El dry_run solo ejercita el camino "ensayo"; la republicación de prueba del mismo pkgver (4.0.2-101→102) era el ensayo de fricción completa y detectó el bug de guard |
+
+### Estado actual (inventario)
+
+- `robert-flo/omarchy-pkgs`: `personal` @ **`4c349ca`** (pin 4.0.2-102 sobre `c5d2cf3`), `master` @
+  **`2fa2f65`** (registro). Workflows idénticos entre ramas.
+- Publicado: par **4.0.2-102** firmado (verificado) + db + aliases. Dev machine: par **4.0.2-101**,
+  `hola-mundo` **0.1.0-2**.
+- Runs: dry `33588803480` ✓, real `33589089108` ✓.
+
+### Lo que falta (próximos pasos)
+
+1. Converger la máquina dev con `omarchy update` (par 101 → 102).
+2. El dueño entregará la lista de ~55 webapps → Etapa 2 (cosecha de personalizaciones, patrón
+   `webapp-workflow.md`).

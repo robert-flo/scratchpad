@@ -35,7 +35,7 @@ clave GPG dedicada `D5E75EAC51A44715`):
 
 | Paquete | Publicado | En la máquina dev |
 |---|---|---|
-| `omarchy` + `omarchy-settings` (par lockstep) | **4.0.2-101** | **4.0.2-101** |
+| `omarchy` + `omarchy-settings` (par lockstep) | **4.0.2-102** | **4.0.2-101** (converge en el próximo `omarchy update`) |
 | `hola-mundo` (PoC de paquete personal) | **0.1.0-2** | **0.1.0-2** |
 
 > **Nota operativa: la Action corre en `robert-flo/omarchy-pkgs`; dispatch SIEMPRE con `--ref personal`.**

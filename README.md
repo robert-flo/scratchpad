@@ -29,13 +29,16 @@ Todo lo siguiente está **completo y probado end-to-end** en la máquina dev:
 - **Cadencia W9** — sync del fork con upstream `quattro` practicado (rebase → re-pin → re-release).
 - **Repo generalizada** — la Action publica **todos** los PKGBUILD marcados `"personal": true`;
   el PoC `hola-mundo` quedó instalado y **mantenido vía `omarchy update`**.
+- **Etapa 2 (launchers)** — 60 launchers (39 webapps + 19 TUI/custom + 2 edge) + 41 iconos
+  cosechados del sistema anterior a la forma canónica (`applications/`) y publicados
+  (commit `8fac9d33`, par 4.0.2-103). Los que ya estaban en upstream no se duplicaron.
 
 Publicado en <https://robert-flo.github.io/omarchy-personal-repo/stable/x86_64> (firmado con la
 clave GPG dedicada `D5E75EAC51A44715`):
 
 | Paquete | Publicado | En la máquina dev |
 |---|---|---|
-| `omarchy` + `omarchy-settings` (par lockstep) | **4.0.2-102** | **4.0.2-101** (converge en el próximo `omarchy update`) |
+| `omarchy` + `omarchy-settings` (par lockstep) | **4.0.2-103** | **4.0.2-101** (converge en el próximo `omarchy update`) |
 | `hola-mundo` (PoC de paquete personal) | **0.1.0-2** | **0.1.0-2** |
 
 > **Nota operativa: la Action corre en `robert-flo/omarchy-pkgs`; dispatch SIEMPRE con `--ref personal`.**

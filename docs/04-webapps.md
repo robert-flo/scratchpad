@@ -24,6 +24,9 @@ StartupNotify=true
 Reglas rápidas:
 
 - `Exec` siempre es `omarchy-launch-webapp <URL>` (abre el navegador por defecto en ventana de app).
+  Si la URL lleva caracteres reservados (`?&#`…) va entre comillas dobles:
+  `omarchy-launch-webapp "https://…/?a=b&c=d"`. Para launchers que necesitan shell
+  (`cd "$HOME/src" && exec …`) el canon es `sh -c "…\"\$HOME…\"…"` (dobles + `\"` y `\$`).
 - `Icon` es el nombre del icono en **minúsculas y con espacios/acentos convertidos a guion**:
   `Google Photos.png` → `google-photos`, `Xataka.png` → `xataka`.
 - Si es una webapp que maneja un esquema (mailto, ...) se agrega `MimeType=x-scheme-handler/<esquema>`.
@@ -45,7 +48,8 @@ git push origin personal
 ```bash
 # 3) Publicar (reprisa el repositorio personal con la Action).
 #    No hace falta decirle el pkgrel: la Action lo deriva sola (§5.3 del plan) —
-#    pkgver nuevo → 99; mismo pkgver → última republicación +1 (hoy 101 → 102).
+#    pkgver nuevo → 99; mismo pkgver → última republicación +1 (lo lee del
+#    PKGBUILD commitado; hoy 102 → 103).
 gh workflow run release-personal.yml -R robert-flo/omarchy-pkgs \
   --ref personal -f version=v4.0.2
 ```

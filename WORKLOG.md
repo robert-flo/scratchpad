@@ -22,6 +22,7 @@ invariantes) y [`README.md`](README.md) resume el estado actual. Si algo aquí c
 9. 2026-09-01 (8ª parte) — Repo personal generalizada: paquete propio `hola-mundo` vía `omarchy update`.
 10. 2026-09-01 (9ª parte) — Revisión L8: endurecimiento de la Action, vigilancia de cadencia, runbook y ADRs.
 11. 2026-09-01 (10ª parte) — Validación L8 con run real (dry_run + publish; bug del guard booleano corregido) + decisión de `hola-mundo`.
+12. 2026-09-01 (11ª parte) — **Etapa 2 / Cosecha de launchers**: 60 `.desktop` + 41 iconos a la forma canónica (`applications/`), publicados en el par 4.0.2-103.
 
 ---
 
@@ -827,5 +828,95 @@ El dueño aprobó validar la Action endurecida (L8) con un **run real** y decidi
 ### Lo que falta (próximos pasos)
 
 1. Converger la máquina dev con `omarchy update` (par 101 → 102).
-2. El dueño entregará la lista de ~55 webapps → Etapa 2 (cosecha de personalizaciones, patrón
-   `webapp-workflow.md`).
+2. ~~El dueño entregará la lista de ~55 webapps → Etapa 2 (cosecha de personalizaciones, patrón
+   `webapp-workflow.md`).~~ **ENTREGADA y cosechada en la 11ª parte** (launchers); quedan las configs
+   (`omarchy reinstall-configs`).
+
+---
+
+## Sesión 2026-09-01 (11ª parte) — Etapa 2: cosecha de launchers RaVN a la forma canónica
+
+### Contexto
+
+El dueño entregó el inventario del sistema anterior (RaVN): webapps y launchers generados por
+scripts (`Scripts/launchers/{webapps,tuis,edge-webapps}.sh` + `manage_launchers.sh`) y las copias
+extraídas del método antiguo (`Scripts/launchers/bin/`). Antes de migrar hubo investigaciones y
+decisiones explícitas (ver abajo). Resultado: **60 launchers** (39 webapps + 19 TUI/custom + 2 edge)
+y **41 iconos** pasan a la forma canónica de upstream (ficheros estáticos en `applications/` del
+fork → publicados por la Action → instalados por el paquete).
+
+### Investigación
+
+- El `bin/` extraído del método viejo es **idéntico al actual de upstream** (`omarchy-launch-webapp`,
+  `omarchy-webapp-install`, handlers HEY/Zoom, etc.). Lo que cambió en `quattro`: las webapps ya no se
+  **generan** por script por máquina; son **archivos estáticos** en el fork `applications/*.desktop`
+  + `applications/icons/*`, empaquetados por `omarchy-settings` (a `/usr/share/omarchy/applications/`,
+  `/etc/skel/.local/share/applications/` para usuarios nuevos, y convertir iconos con `magick` a
+  hicolor `256x256`/`48x48`/`scalable` con `icon_id` = nombre en minúsculas + no-alfanuméricos→`-`).
+- El `Exec=` de las webapps = `omarchy-launch-webapp <url>`; los launchers TUI usan
+  `xdg-terminal-exec --app-id=TUI.{float,tile} -e <cmd>` (upstream: p. ej. `Docker.desktop`).
+- **Los .desktop del método viejo eran inválidos para la spec** (validador `desktop-file-validate`
+  marcaba `Exec=sh -c '...'` con comillas simples y `$` sin escapar como ERRORES). Se corrigieron al
+  canon: comillas dobles + `\"` para comillas internas + `\$` para `$`.
+
+### Decisiones del dueño
+
+1. Alcance: webapps + TUIs + edge (todo entra al fork).
+2. Nombres: corregir typos y normalizar — `Fronted Masters`→`Frontend Masters`, `Notion `→`Notion`,
+   sufijo ` ai`→` AI` (Canva AI, Deepseek AI, Kimi AI, Qwen AI, …).
+3. Casos especiales (TUIs de dev, OpenClaw Dashboard 127.0.0.1, WhatsApp 2/X 2 Edge): **todos entran**;
+   las dependencias (bins) se instalarán en futuras interacciones (out-of-the-box funcionan tras
+   `omarchy update` + instalar los bins).
+
+### Qué se hizo (orden real)
+
+1. **Inventario** a partir de `webapps.sh`, `tuis.sh`, `edge-webapps.sh` y el manifest
+   `restore_launchers.psv`; cruce con lo ya canónico en el fork: **11 webapps ya existían** con las
+   mismas URLs (Basecamp, Discord, HEY, Zoom, WhatsApp, X, YouTube, Google Contacts/Maps/Messages/
+   Photos) → **no se duplican**. Igual con `Disk Usage` y `Docker` (launchers TUI de upstream).
+2. **Generador** (python, `/tmp/opencode/harvest/harvest.py`): emite `applications/<Name>.desktop`
+   canónico y copia iconos de `Configs_RaVN/.local/share/applications/icons/` a
+   `applications/icons/` con los renombres de la normalización.
+3. **Iconos**: 41 nuevos (los ya presentes — ChatGPT, X, WhatsApp, YouTube, OpenClaw compartido, etc.
+   — se reusan; `Herdr` usa el icono de tema `utilities-terminal` y `lyricify` `spotify`).
+4. **Validación**: `desktop-file-validate` en los 77 `.desktop` (60 nuevos + 17 previos) → **0 errores**.
+5. **Commit y push** en `personal` (**`8fac9d33`**, "personal: harvest launchers RaVN…", 101 archivos).
+6. **Release**: dispatch `33591948941` **SUCCESS** → par **4.0.2-103** publicado (pkgrel autoderivado
+   102→103; pin `d5c435d`). `hola-mundo` sigue 0.1.0-2.
+7. **Verificación end-to-end** (descargando `omarchy-settings-4.0.2-103`): 77 `.desktop` en
+   `/usr/share/omarchy/applications/`, 77 en `/etc/skel/`, e iconos magick-de hicolor (`canva-ai`,
+   `gemini-ai`, `notion`, `perplexity-ai`, `qwen-ai`, …) en 256 y 48.
+
+### Regla de oro del Exec canónico (aprendida)
+
+- Fuera de comillas el carácter `'` es literal inválido y `?&#;$` etc. son reservados → toda URL o
+  script `sh -c` va **entre comillas dobles** con `\"` y `\$` cuando corresponda. Los bins que usan
+  `sh -c 'cd "$HOME/src" && exec …'` quedan como `Exec=sh -c "cd \"\$HOME/src\" && exec …"`.
+
+### Decisiones registradas (con razón)
+
+| Decisión | Razón |
+|---|---|
+| Cosechar como ficheros estáticos `applications/` (no scripts) | Es la forma canónica dalla `quattro`; un fichero los publica por paquete a todas las máquinas (incl. `/etc/skel`); los scripts generadores quedan obsoletos |
+| No duplicar lo que ya existe en upstream (11 webapps + 2 TUIs) | Mismas URLs/ejecución; commitear copias idénticas solo añade ruido a `personal` |
+| Normalizar nombres (typos + `ai`→`AI`) | Nombre visible único y consistente en el launcher; los typos de origen eran `Fronted Masters` y `Notion ` |
+| Exec con quoting canónico (comillas dobles, `\$`) | El método viejo generaba `.desktop` que violaban la spec (validador rojo); con el quoting correcto pasan `desktop-file-validate` y siguen lanzando igual |
+| Incluir TUIs edge/local aun sin bins en todas las máquinas | El launcher es estático; la dependencia real (bins/herramientas) se instala por máquina en interacciones siguientes, según decidió el dueño |
+
+### Estado actual (inventario)
+
+- `robert-flo/omarchy`: `personal` @ **`8fac9d33`** (harvest), sobre `1540c220` (Etapa 4). Detrás de
+  `upstream/quattro`.
+- `robert-flo/omarchy-pkgs`: `personal` @ **`d5c435d`** (pin 4.0.2-103), `master` @ `2fa2f65`.
+- Publicado: par **4.0.2-103** (firmado; verificado el contenido del paquete). Dev machine: par
+  **4.0.2-101** + `hola-mundo 0.1.0-2` (pendiente `omarchy update`).
+- Launchers canónicos en el fork: **77** `.desktop` + **60** iconos (`applications/`).
+
+### Lo que falta (próximos pasos)
+
+1. `omarchy update` en la máquina dev → par 4.0.2-103 + **materializar los 60 launchers** vía
+   `omarchy-refresh-applications` (los entrega el paquete en `/usr/share/omarchy/applications/`).
+2. Instalar en la máquina dev los bins de los launchers (antigravity, hermes, opencode, omp, qwen,
+   zero, mimo, codex, lazydocker…). Estáticos webapps no requieren nada extra (navegador por defecto).
+3. Resto de la Etapa 2: personalizaciones de configs (`omarchy reinstall-configs`) y onboarding de
+   máquinas reales (Etapa 5).

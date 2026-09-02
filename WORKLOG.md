@@ -421,11 +421,78 @@ Action `release-personal.yml` que corre en el repo huésped `robert-flo/omarchy-
 
 ### Lo que falta (próximos pasos)
 
-1. **Prueba end-to-end (§0.2 item 5)**: reinstalar par stock en la máquina dev → confiar clave
-   personal → `omarchy refresh pacman` → `omarchy update` → verificar que el par se toma de
-   `[omarchy-personal]`. (Requiere keyring con la personal ANTES del refresh, por el SigLevel
-   Required heredado.)
+1. **Prueba end-to-end (§0.2 item 5)** — EJECUTADA en la sesión siguiente (6ª parte), PASA.
 2. Cadencia W9: rebase de `personal` sobre `upstream/quattro` (tag `v4.0.2`), sync del tag al
    fork y re-pin del release (con nueva republicación: pkgrel 101 o el que toque según §5.3).
 3. Clave pública del repo personal en `keys/omarchy-personal-repo.pub.asc` del scratchpad
    (privada NO versionada; solo secret `GPG_PRIVATE_KEY`).
+
+---
+
+## Sesión 2026-09-01 (6ª parte) — Prueba END-TO-END en la máquina dev (PASA)
+
+### Contexto
+
+Cierre de la Etapa 4: ejecutar el §0.2 item 5 literalmente. En vez de "reinstalar el par stock
+para luego subir", se instaló directamente el par **desde `[omarchy-personal]`** (la fuente de
+verdad que queríamos demostrar). Máquina: `ludus` (desktop, sin TTY para el agente).
+
+### Qué se hizo (orden real, con comandos y resultados)
+
+1. **Recon (sin root)**: `omarchy-dev dev.0e6c11d5-1` + `omarchy-settings-dev dev.0e6c11d5-1`
+   instalados; reverse-deps solo `omarchy-settings-dev → omarchy-dev`; `OMARCHY_PATH=/usr/share/
+   omarchy` (instalado, no checkout → `omarchy update-dev` sale por exit 0); `/etc/pacman.conf`
+   solo con `[core] [extra] [multilib] [omarchy]`; snapper disponible, 194G libres.
+2. **Escalada**: el timestamp de sudo es por-TTY y el agente no tiene TTY → `sudo -v` del usuario
+   no vale. Drop-in temporal del usuario `echo 'dominus ALL=(ALL:ALL) NOPASSWD: ALL' | sudo tee
+   /etc/sudoers.d/99-e2e` (+`visudo -c`). **Se retiró al final** (máquina queda como estaba).
+3. **Flujo root** (`/tmp/opencode/e2e-root.sh`, un solo `sudo bash`):
+   - `pacman-key --add keys/omarchy-personal-repo.pub.asc` + `--lsign-key D5E75EAC51A44715`.
+   - `pacman -R --noconfirm omarchy-settings-dev omarchy-dev` (quitado el par dev; sin conflictos).
+   - Se inyecta `[omarchy-personal]` antes de `[omarchy]` en `/etc/pacman.conf` (una vez; la config
+     del fork la escribe después `omarchy refresh pacman`).
+   - `pacman -Syy` → dígerencia los dbs (incluida la ALIAS `omarchy-personal.db`, con firma OK).
+   - `pacman -S --noconfirm omarchy omarchy-settings` → instaló `omarchy-personal/omarchy 4.0.2-100`
+     y `omarchy-personal/omarchy-settings 4.0.2-100` (la atribución a `omarchy-personal` aparece en
+     la propia salida del resolver, y en pacman.log `[ALPM] installed omarchy (4.0.2-100)`).
+4. **`omarchy refresh pacman`** → `/etc/pacman.conf` quedó literalmente el `pacman-stable.conf` del
+   fork instalado (`[omarchy-personal]` línea 32, `[omarchy]` 36, comentario de la clave) +
+   mirrorlist `stable-mirror.omarchy.org`; `pacman -Syyuu --noconfirm` → "nothing to do".
+5. **`omarchy update -y`** (1er intento FALLADO, 2º OK):
+   - Fallo: `omarchy-update-stay-awake start` corre `sudo -v` cuando stdin es TTY (dentro de
+     `script -qefc`, lo es). Con NOPASSWD en sudoers, **`sudo -v` sigue exigiendo password** (quirk
+     de sudo), el prompt se queda 5 min (passwd_timeout) y el update aborta con "Something went
+     wrong" — RC=1, tras crear el snapshot #4 (tag `4.0.2-100`).
+   - Neutralización probada: `Defaults:dominus !authenticate` en `/etc/sudoers.d/100-e2e-noauth`
+     → `sudo -v` valida al instante (test en pty). Se retiró al final igualmente.
+   - 2º intento RC=0: snapshot #5 (`4.0.2-100`), `pacman -Syu` sin pendientes, 3 migraciones
+     (1787666837, 1787760281, 1787843905), AUR: `google-chrome` flagged OOD (sin upgrade), mise:
+     `codex 0.152.0→0.152.1`, `opencode 1.18.25→1.18.26`, shell restart.
+6. **Verificación final**: `omarchy`/`omarchy-settings` 4.0.2-100; keyring con la personal
+   `D5E75EAC51A44715 [full]` Y la de packaging `40DFB630… [full]`; `/etc/pacman.conf` con
+   `[omarchy-personal]` sostenido por el paquete del fork (auto-mantenible en futuros refreshes);
+   par dev ausente; `sudoers.d` limpio de artefactos temporales.
+
+### Decisiones registradas (con razón)
+
+| Decisión | Razón |
+|---|---|
+| Instalar el par directo desde `[omarchy-personal]` (no reinstalar stock primero) | Es la prueba real del flujo: la atribución de repo aparece en la salida del resolver |
+| Confiar la clave personal ANTES de `-Syy` y del refresh | `[omarchy-personal]` hereda `Required DatabaseOptional`; sin clave en keyring la sync falla |
+| Inyección manual de `[omarchy-personal]` en pacman.conf, solo esta vez | La config del fork (con la sección) se escribe sola en el primer `refresh pacman` del paquete personal |
+| Drop-in sudoers temporal (99-e2e, 100-e2e-noauth) y retirada al terminar | Sin TTY el timestamp por-TTY del usuario no vale; dejar la máquina como estaba |
+| `omarchy update -y` no-interactivo puede colgarse en `sudo -v` de stay-awake | No desactivarlo a nivel script del sistema; documentar el quirk (interactivo pide password y sigue) |
+
+### Estado actual (inventario)
+
+- Máquina dev `ludus`: par **4.0.2-100** instalado desde `[omarchy-personal]`; restaurar la línea
+  dev en el futuro = re-ejecutar el bootstrap (fase dev).
+- Keyring con ambas claves `[full]` (packaging oficial + personal). Snapshots snapper #4/#5.
+- Repos: fork `personal` @ `ebfb3038`; `omarchy-pkgs` `personal` @ `26e524a`, `master` @ `fe47b16`.
+
+### Lo que falta (próximos pasos)
+
+1. Cadencia W9: rebase de `personal` sobre `upstream/quattro` (tag `v4.0.2`), sync del tag al fork
+   y re-pin/republicación (pkgrel 101 o el que toque según §5.3).
+2. Valorar documentar el quirk de `sudo -v`/stay-awake en la cadencia W-repos (nada que arreglar en
+   el fork; comportamiento aguas arriba).

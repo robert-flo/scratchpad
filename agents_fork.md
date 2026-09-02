@@ -37,11 +37,13 @@ Decisiones ya fijadas (Q&A previo):
   (gh-pages) publica el par `omarchy`/`omarchy-settings` **4.0.2-99** firmado via la Action
   `release-personal.yml` (run verde `33565145113`). Site:
   `https://robert-flo.github.io/omarchy-personal-repo/stable/x86_64`.
-- **Etapa 4 COMPLETA (2026-09-01, 5ª parte)**: `[omarchy-personal]` ANTES de `[omarchy]` en
+- **Etapa 4 COMPLETA (2026-09-01, 5ª y 6ª parte)**: `[omarchy-personal]` ANTES de `[omarchy]` en
   `default/pacman/pacman-stable.conf` del fork fuente (`ebfb3038`); par republicado a
   **4.0.2-100** (run verde `33571098815`; dos fallos previos por TLS transitorio de
   archlinux.org). Acción además publica `omarchy-personal.db`(+`.sig`,+`.files`,+`.sig`) porque
-  la db toma el nombre de la sección. Sombreado VERIFICADO con dry-run (`pacman -Su --print`).
+  la db toma el nombre de la sección. Sombreado VERIFICADO con dry-run (`pacman -Su --print`) y
+  **END-TO-END en la máquina dev** (`omarchy-personal/omarchy 4.0.2-100` instalado con `pacman -S`;
+  `omarchy refresh pacman` deja pacman.conf = config del fork; `omarchy update -y` RC=0).
 - POC webapp: **Xataka** (`applications/Xataka.desktop` + `applications/icons/Xataka.png`) en `personal`;
   materializado con `omarchy-refresh-applications`; ventana Chrome modo app abierta y verificada
   (`chrome-www.xataka.com__-Default`). El patrón queda demostrado para iterar las ~55 webapps del dueño.
@@ -94,11 +96,17 @@ y este bloque de estado antes de continuar.
    Re-publicar tras nuevos cambios: `gh workflow run release-personal.yml
    -R robert-flo/omarchy-pkgs --ref personal -f version=v4.0.2 -f pkgrel=100`
    (incrementar pkgrel por cada republicación del mismo pkgver, §5.3).
-5. **Prueba end-to-end**: reinstalar el par `omarchy` / `omarchy-settings` stock en la máquina dev,
-   correr `omarchy update` y verificar que el par se toma de `[omarchy-personal]` (nuestro fork) y el
-   resto del ecosistema de upstream. Criterio de éxito: `omarchy update` normal, sin pasos extra,
-   deja las ~55 webapps y la personalización del fork instaladas. (Requiere confiar la clave personal
-   en el keyring ANTES del refresh, porque `[omarchy-personal]` hereda `SigLevel = Required`.)
+5. ~~**Prueba end-to-end**~~ **HECHO (2026-09-01, 6ª parte)**: en la máquina dev (`ludus`) se
+   confió la clave personal, se quitó el par dev, se inyectó una vez `[omarchy-personal]` en
+   `/etc/pacman.conf`, y **`pacman -S` instaló `omarchy-personal/omarchy` + `omarchy-settings`
+   `4.0.2-100`** (atribución a `omarchy-personal` en la salida del resolver y en pacman.log).
+   Después `omarchy refresh pacman` dejó el pacman.conf literalmente el del fork (autosostenido
+   por el paquete instalado) y `omarchy update -y` convergió con RC=0 (snapshot #5, pacman -Syu
+   sin pendientes, 3 migraciones, AUR/mise OK; keyring final con la personal `D5E75EAC51A44715
+   [full]`). Nota/gocha de escalada no-interactiva: `omarchy-update-stay-awake` llama `sudo -v`
+   dentro de su pty, y **con NOPASSWD en sudoers `sudo -v` sigue exigiendo password** (quirk de
+   sudo) → en sesión no interactiva el prompt expira (passwd_timeout ~5 min) y el update aborta;
+   en terminal normal simplemente pide la contraseña. No es un bug del fork; documentación sola.
 6. **Después del hito**: iterar las ~55 webapps del dueño (patrón de `webapp-workflow.md`); onboarding
    de máquinas reales (Etapa 5); cadencia de sync con upstream (Etapa 6) cuando haya máquinas en uso.
 
@@ -264,7 +272,8 @@ aliases (commit `26e524a`, copia en `master` `fe47b16`).
 - [x] En el fork fuente, insertar `[omarchy-personal]` **antes** de `[omarchy]` en `default/pacman/pacman-stable.conf` (solo `stable`; decisión tomada).
 - [x] Publicar el par personal corriendo la Action (receta W7) con la regla de versión de §5.3 (`4.0.2-100`).
 - [x] Verificar el sombreado (pseudo-root con las dbs del repo personal + oficial; `pacman -Su --print` con el par stock `4.0.2-1` "instalado"): `omarchy-personal omarchy 4.0.2-100` y `omarchy-personal omarchy-settings 4.0.2-100`; el resto del ecosistema sigue atribuido a `[omarchy]` oficial (omarchy-keyring, limine-hooks, ttf…).
-- **Criterio de aceptación** (COMPLETO): un check dry-run muestra que `omarchy` y `omarchy-settings` "suben" a la versión personal (no a la oficial).
+- [x] Prueba END-TO-END en la máquina dev (W8/§0.2 item 5, 6ª parte): instalar el par desde `[omarchy-personal]` real (`pacman -S` instaló `omarchy-personal/omarchy 4.0.2-100`), `omarchy refresh pacman` (pacman.conf = config del fork), `omarchy update -y` RC=0. Detalles y el quirk de `sudo -v`/stay-awake en WORKLOG 6ª parte.
+- **Criterio de aceptación** (COMPLETO): un check dry-run muestra que `omarchy` y `omarchy-settings` "suben" a la versión personal (no a la oficial), y la máquina dev está convergida vía `omarchy update` normal.
 
 ### Etapa 5 — Onboarding de máquinas
 

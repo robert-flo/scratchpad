@@ -1,9 +1,21 @@
 # WORKLOG.md — Bitácora del fork de Omarchy
 
-Este archivo registra qué se hizo, por qué y cómo, sesión por sesión. Es la memoria de
-procedimiento del proyecto; `agents_fork.md` es la referencia normativa (plan, etapas,
-recetas, invariantes). Si algo aquí contradice a `agents_fork.md`, el error está en la
-bitácora: corregir la bitácora, nunca rebajar el plan.
+Registra qué se hizo, por qué y cómo, **sesión por sesión**. Es la memoria de procedimiento del
+proyecto; [`agents_fork.md`](agents_fork.md) es la referencia normativa (plan, etapas, recetas,
+invariantes) y [`README.md`](README.md) resume el estado actual. Si algo aquí contradice a
+`agents_fork.md`, el error está en la bitácora: corregir la bitácora, nunca rebajar el plan.
+
+## Índice de sesiones
+
+1. [2026-08-30](#sesión-2026-08-30) — Bootstrap del fork y primer POC: webapp Xataka.
+2. [2026-09-01 — Sesión](#sesión-2026-09-01) — Fork de `omarchy-pkgs` + bootstrap reproducible (Etapa 0 completa).
+3. [2026-09-01 (2ª parte)](#sesión-2026-09-01-2ª-parte) — Xataka no aparecía: `omarchy update` pisa el par dev (lección aprendida).
+4. [2026-09-01 (3ª parte)](#sesión-2026-09-01-3ª-parte) — Criterio de aceptación Etapa 0 + dev loop al fork.
+5. [2026-09-01 (4ª parte)](#sesión-2026-09-01-4ª-parte) — **Etapa 3 / W7 completa**: repo personal en GitHub Pages.
+6. [2026-09-01 (5ª parte)](#sesión-2026-09-01-5ª-parte) — **Etapa 4 completa**: sombreado `[omarchy-personal]`.
+7. [2026-09-01 (6ª parte)](#sesión-2026-09-01-6ª-parte) — Prueba END-TO-END en la máquina dev (PASA).
+8. [2026-09-01 (7ª parte)](#sesión-2026-09-01-7ª-parte) — Cadencia W9 ejecutada (rebase + re-pin 4.0.2-101).
+9. [2026-09-01 (8ª parte)](#sesión-2026-09-01-8ª-parte) — Repo personal generalizada: paquete propio `hola-mundo` vía `omarchy update`.
 
 ---
 

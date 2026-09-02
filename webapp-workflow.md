@@ -146,15 +146,23 @@ omarchy-refresh-applications
   no está instalado) → construir `omarchy-dev` con `--nodeps --skipchecksums`; las deps
   runtime se validan en la instalación conjunta.
 - **Paths del dev loop**: `~/Work/omarchy/omarchy-installer` (fork, rama personal) y
-  `~/Work/omarchy/omarchy-pkgs` (pkgs, de momento clone de upstream). El tool
+  `~/Work/omarchy/omarchy-pkgs` (fork; el dev loop sale de él desde el layout). El tool
   `omarchy dev pkg-test` usa esas rutas por valor; no cambiarlas sin parchear el tool.
   Ojo en sesiones de agente: `command -v omarchy` puede apuntar a otro checkout; usar
   `/usr/bin/omarchy` o la ruta del dev instalado.
 
-## 7. Estado al cierre de esta guía (2026-08-30)
+## 7. Estado histórico (snapshot al cierre de esta guía, 2026-08-30)
+
+> Snapshot de cuando se escribió esta guía. El estado actual (Etapa 3/4 completas, par publicado,
+> repo personal generalizada) está en [`README.md`](README.md). Para el flujo vigente (repos
+> publicados por la Action, W7) ver `agents_fork.md`.
 
 - Fork: `robert-flo/omarchy`, rama `personal` en `89759761` ("personal: add Xataka webapp (POC)").
 - Máquina: `omarchy-dev` + `omarchy-settings-dev` `dev.89759761-1` (línea dev).
 - POC verificado: ventana Chrome modo app con Xataka (`chrome-www.xataka.com__-Default`).
-- Pendiente: iterar las ~55 webapps del dueño con este mismo patrón; luego el repo pacman
+- Pendiente entonces: iterar las ~55 webapps del dueño con este mismo patrón; luego el repo pacman
   personal (Etapa 3 — ver `agents_fork.md`).
+
+Hoy (2026-09-01) el patrón de este documento sigue siendo la receta para agregar webapps
+(W1 de `agents_fork.md`); solo cambia cómo se publican: cada cambio de fuente del par se empaqueta
+y sirve vía la Action de release (W7), no por instalación dev por máquina.

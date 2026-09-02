@@ -168,7 +168,12 @@ Si corre `omarchy update` hoy:
 
 
 
-## Estado al cierre de esta guía (2026-08-30)
+## Estado al cierre de esta guía (snapshot 2026-08-30)
+
+> Snapshot de cuando se escribió la guía. El estado actual está en
+> [`README.md`](README.md) (Etapa 3/4 completas, par publicado 4.0.2-101); el flujo operativo
+> vigente es el de la Action de release (W7 de `agents_fork.md`): "sombreado parcial" ya está en
+> producción, no es un plan.
 
 - Máquina dev: `omarchy-dev` + `omarchy-settings-dev` `dev.89759761-1`.
 - Fork: `robert-flo/omarchy`, rama `personal`, commit `89759761` (POC Xataka).

@@ -77,32 +77,80 @@ gh run watch --exit-status
 omarchy update
 ```
 
-## Seguir el release de Omarchy upstream
+## Seguir el release de Omarchy upstream (Cadencia Automática & Manual)
 
-Cuando Omarchy publica una versión nueva (`vX.Y.Z`), hay que alinear el fork y republicar. Los
-pasos (en `~/Work/omarchy/omarchy-installer`):
+Cuando Omarchy upstream (`omacom/omarchy`) publica una versión nueva (`vX.Y.Z`), el sistema cuenta con un **pipeline automatizado de cadencia a las 04:00 AM** que detecta el tag, sincroniza la rama `quattro`, rebasea `personal`, compila los paquetes y los publica sin requerir intervención manual.
 
-```bash
-git fetch upstream
-git rebase upstream/quattro        # sobre la rama personal
-git push --force-with-lease origin personal
-git push origin vX.Y.Z             # sincroniza el tag de la versión al fork
+### Arquitectura del Pipeline de Sincronización
+
+```mermaid
+graph TD
+    Cron[04:00 AM Cron / Dispatch] --> Check[sync-check.yml: Detecta nuevo tag vX.Y.Z]
+    Check --> IssueOpen[Abre GitHub Issue: Cadencia vX.Y.Z detectado]
+    IssueOpen --> Trigger[Dispara release-personal.yml]
+    Trigger --> SyncQuattro[1. Fetch upstream & Fast-Forward quattro]
+    SyncQuattro --> Rebase[2. git rebase quattro sobre personal]
+    Rebase -->|Rebase Exitoso| PushPersonal[Push quattro & personal a GitHub]
+    PushPersonal --> Build[Compilación Arch Linux & Firma GPG]
+    Build --> Publish[Publicación a gh-pages]
+    Publish --> Verify[Validación HTTP 200 en GitHub Pages]
+    Verify --> IssueClose[Auto-cierre del GitHub Issue con reporte]
+    
+    Rebase -->|Conflicto de Código| AbortRebase[git rebase --abort]
+    AbortRebase --> AlertIssue[Abre/Actualiza Issue: Alerta de Conflicto]
+    AlertIssue --> StopPipeline[Fin seguro: no se publican paquetes rotos]
 ```
 
+### 1. Flujo Desatendido Diario (Zero-Touch a las 04:00 AM)
+1. **Detección (`sync-check.yml`):**
+   - Compara el último tag de release en `omacom/omarchy` contra los paquetes en `omarchy-personal-repo`.
+   - Si detecta un tag nuevo, abre un GitHub Issue de seguimiento y dispara `release-personal.yml`.
+2. **Sincronización y Rebase (`release-personal.yml`):**
+   - Usa la deploy key `SSH_OMARCHY_SOURCE_KEY` para autenticación con permisos de escritura sobre `robert-flo/omarchy`.
+   - Hace Fast-Forward de `quattro` directo a `upstream/quattro`.
+   - Ejecuta `git rebase quattro` sobre la rama `personal`.
+   - Si no hay conflictos, hace push de `quattro` y `personal` a GitHub, compila con Docker, firma con GPG y publica en GitHub Pages.
+   - Valida el HTTP 200 de los metadatos y **cierra automáticamente el GitHub Issue** con el reporte de entrega.
+3. **Escudo ante Conflictos:**
+   - Si upstream modifica una línea que colisiona con las personalizaciones del fork, el workflow detecta el conflicto, ejecuta `git rebase --abort`, aborta la compilación para evitar publicar software roto, y publica un GitHub Issue de alerta con la lista de archivos afectados e instrucciones exactas de resolución local.
+
+### 2. Flujo Manual (Si deseas adelantar la sincronización o resolver conflictos)
+
+Si deseas sincronizar manualmente en cualquier momento desde tu terminal local:
+
 ```bash
-# En ~/Work/omarchy/omarchy-pkgs: publicar con el pkgver del tag nuevo (el pkgrel se
+cd ~/Work/omarchy/omarchy-installer  # o directorio robert-flo_omarchy-personal
+git fetch upstream
+git checkout -B quattro upstream/quattro
+git push origin quattro
+git checkout personal
+git rebase quattro
+git push --force-with-lease origin personal
+```
+
+Y luego disparar la publicación de paquetes:
+
+```bash
+# En omarchy-pkgs: publicar con el pkgver del tag nuevo (el pkgrel se
 # deriva solo: pkgver nuevo → base 99, por encima del oficial)
 gh workflow run release-personal.yml -R robert-flo/omarchy-pkgs \
   --ref personal -f version=vX.Y.Z
 ```
 
-…y en cada máquina `omarchy update`.
+…y en cada máquina al despertar o trabajar:
+```bash
+omarchy update
+```
 
 ### Qué hacer si hay conflictos en el rebase
 
-Ideales: no deberían existir si tus cambios personales tocan archivos que upstream apenas mueve.
-Si un archivo tuyo choca con upstream, pregunta si tu cambio conviene upstream (está en el espíritu
-del proyecto contribuir de vuelta) y resuelve el conflicto a mano como cualquier rebase.
+Si el bot abrió un issue de alerta `[Conflicto Rebase]`:
+1. Ve al directorio local de `omarchy` (`robert-flo_omarchy-personal`).
+2. Ejecuta `git fetch upstream && git checkout personal && git rebase upstream/quattro`.
+3. Abre los archivos marcados con conflicto, ajusta las diferencias preservando las personalizaciones deseadas.
+4. Ejecuta `git add <archivos-resueltos>` y `git rebase --continue`.
+5. Haz push forzado seguro: `git push --force-with-lease origin personal`.
+6. Cierra el GitHub Issue y dispara `release-personal.yml` con `gh workflow run`.
 
 ### Verificación mínima tras publicar
 

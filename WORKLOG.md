@@ -1071,3 +1071,28 @@ con la Matriz.
   `install/user/*.sh` + `omarchy-mise-install`, validado con `omarchy dev pkg-test` en la máquina
   dev (escenario DEV), y que el `paquete` lo lleve a máquinas con `omarchy update` (escenario
   MÁQUINAS).
+
+---
+
+## 14ª parte (2026-09-30) — Cadencia desatendida 04:00 AM: Sincronización automática de `quattro` y rebase de `personal`
+
+### Contexto y Necesidad
+Upstream (`omacom/omarchy`) publicó la versión `v4.0.4`. El workflow de cadencia `sync-check.yml` detectaba diariamente las novedades, pero el pipeline de compilación `release-personal.yml` tomaba el checkout de `personal` sin sincronizar `quattro` ni rebasear `personal` sobre la última versión upstream, requiriendo intervención manual en la terminal. El dueño solicitó que todo el proceso ocurra de manera 100% automática a las 04:00 AM (zero-touch), con apertura y auto-cierre de GitHub Issues de seguimiento y alertas en caso de conflicto.
+
+### Implementación y Decisiones
+1. **Seguridad Cross-Repo (Deploy Key):**
+   - Se generó un par de claves SSH dedicado (`omarchy-source-sync`, fingerprint `e7PY4IYynXJYMP2ABoM4sqTkwOcvRK/bEhFlBHVwRM8`).
+   - Clave pública autorizada como Deploy Key con permisos de escritura en `robert-flo/omarchy`.
+   - Clave privada configurada como secret `SSH_OMARCHY_SOURCE_KEY` en `robert-flo/omarchy-pkgs`.
+2. **Paso de Fast-Forward y Rebase en CI (`release-personal.yml`):**
+   - Se configuró el checkout de `source` con la clave SSH y `fetch-depth: 0`.
+   - Se implementó el paso `Sincroniza quattro y rebase de personal sobre upstream` que avanza `quattro` (Fast-Forward), rebasea `personal` sobre `quattro`, y hace push a GitHub.
+   - En caso de conflicto de código, ejecuta `git rebase --abort`, aborta la compilación para no publicar software roto y crea un GitHub Issue de alerta con la lista de archivos colisionados y el procedimiento manual de resolución.
+3. **Workflow Standalone en el Fork (`sync-upstream.yml`):**
+   - Se añadió `.github/workflows/sync-upstream.yml` en `robert-flo/omarchy` para permitir sincronizaciones manuales o bajo demanda desde la interfaz de GitHub.
+4. **Diagrama Canónico de Arquitectura:**
+   - Se documentó el flujo completo mediante un diagrama Mermaid en [`ARCHITECTURE.md`](ARCHITECTURE.md) (§1.3) y [`docs/05-mantener.md`](docs/05-mantener.md), preservando la referencia visual del pipeline.
+5. **Issues y Tracking:**
+   - Issues `robert-flo/omarchy-pkgs#5` y `robert-flo/omarchy#1` asociados y resueltos.
+   - Registro en `CHANGELOG.md` de ambos repositorios y en el Kanban de TickTick (`💵 OMARCHY`).
+

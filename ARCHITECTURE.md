@@ -58,6 +58,34 @@ los refresh (pero **ese es trabajo de dev / una migración**, ver §3).
 > en máquinas futuras**. Nada se instala por un script suelto que se corre a mano por máquina, ni
 > por dotfiles, ni por mecanismos paralelos.
 
+### 1.3 Cadencia Automática de Upstream y Rebase de Personal (04:00 AM)
+
+Para mantener el fork continuamente alineado con las versiones oficiales sin intervención humana, un pipeline de cadencia desatendida opera diariamente a las 04:00 AM (o bajo demanda vía `workflow_dispatch`):
+
+```mermaid
+graph TD
+    Cron[04:00 AM Cron / Dispatch] --> Check[sync-check.yml: Detecta nuevo tag vX.Y.Z]
+    Check --> IssueOpen[Abre GitHub Issue: Cadencia vX.Y.Z detectado]
+    IssueOpen --> Trigger[Dispara release-personal.yml]
+    Trigger --> SyncQuattro[1. Fetch upstream & Fast-Forward quattro]
+    SyncQuattro --> Rebase[2. git rebase quattro sobre personal]
+    Rebase -->|Rebase Exitoso| PushPersonal[Push quattro & personal a GitHub]
+    PushPersonal --> Build[Compilación Arch Linux & Firma GPG]
+    Build --> Publish[Publicación a gh-pages]
+    Publish --> Verify[Validación HTTP 200 en GitHub Pages]
+    Verify --> IssueClose[Auto-cierre del GitHub Issue con reporte]
+    
+    Rebase -->|Conflicto de Código| AbortRebase[git rebase --abort]
+    AbortRebase --> AlertIssue[Abre/Actualiza Issue: Alerta de Conflicto]
+    AlertIssue --> StopPipeline[Fin seguro: no se publican paquetes rotos]
+```
+
+**Principios del pipeline:**
+1. **Sincronización 1:1 de `quattro`**: La rama `quattro` avanza siempre por *Fast-Forward* contra `omacom/omarchy:quattro`.
+2. **Rebase de `personal`**: Se rebasea `personal` sobre `quattro` mediante deploy key (`SSH_OMARCHY_SOURCE_KEY`), conservando las personalizaciones siempre en la punta de la historia git.
+3. **Escudo de conflicto**: Si hay colisión con upstream, el workflow ejecuta `git rebase --abort` y abre un GitHub Issue de alerta inmediata, deteniendo la compilación para evitar publicar paquetes inconsistentes.
+4. **Ciclo de Issue automático**: En ejecución exitosa, el GitHub Issue creado al inicio se auto-cierra con el reporte de publicación y validación HTTP 200.
+
 ---
 
 ## 2. MATRIZ DE DECISIÓN — la puerta obligatoria

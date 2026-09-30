@@ -1,4 +1,17 @@
-# scratchpad — Fork personal de Omarchy
+# ⚠️ [ARCHIVADO] scratchpad — Fork personal de Omarchy
+
+> ### 🛑 ESTE REPOSITORIO ESTÁ ARCHIVADO Y EN MODO SOLO LECTURA
+> **Toda la documentación, decisiones de arquitectura (ADRs), guías de onboarding, matrices de decisión y runbooks han sido completamente consolidados y modernizados en el portal canónico de documentación:**
+> 
+> 🌐 **[https://robert-flo.github.io/fork-docs/](https://robert-flo.github.io/fork-docs/)**
+> 
+> Repositorio canónico: [`robert-flo/fork-docs`](https://github.com/robert-flo/fork-docs)
+> 
+> **No edite ni agregue nueva documentación en este repositorio.** Todas las modificaciones futuras deben realizarse directamente en `robert-flo/fork-docs`.
+
+---
+
+# scratchpad — Fork personal de Omarchy (Histórico)
 
 > **⛔ Repositorio PÚBLICO por diseño.** Este proyecto son forks de repos abiertos en GitHub.
 > **Nunca commitear claves privadas** (GPG privada, deploy keys, tokens): las claves privadas solo

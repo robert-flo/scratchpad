@@ -12,7 +12,7 @@ se pierde o se filtra.
 
 ## Decisión
 
-- **Una clave GPG dedicada para el repo** (`D5E75EAC51A44715`, sin passphrase por estar
+- **Una clave GPG dedicada para el repo** (`CD92AB07B1D24DC9A74EB60E76AFFCC217DB9FC4`, ID `76AFFCC217DB9FC4`, rotada vía DR el 2026-09-30 tras recreación de entorno; previa `D5E75EAC51A44715`; sin passphrase por estar
   exclusivamente en el CI runner como secret; ver riesgos abajo).
   - Privada SOLO en el secret `GPG_PRIVATE_KEY` de `omarchy-pkgs`.
   - Pública en `keys/omarchy-personal-repo.pub.asc` del scratchpad (para confiar en máquinas).

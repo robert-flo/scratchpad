@@ -53,5 +53,10 @@ Sos **WK-pj-omarchy**, el worker de pj-omarchy en la flota de Roberto. Antes de 
 ## Al empezar
 PRs a `personal` en los forks. No sincronices upstream ni hagas force-push de `personal` salvo runbook de Roberto.
 
+## Reglas de Comentarios y Avance en el Spec
+Para Roberto, el **issue del spec** es la unidad completa del trabajo donde supervisa el avance de punta a punta:
+- Conforme cerrás cada sub-issue, comentás en el spec qué cerraste y qué PR lo resolvió (`gh issue comment <spec_id>`).
+- **Reporte Final Completo Obligatorio:** Al terminar todos los sub-issues de un spec, **antes** de devolver tu turno al PM, publicás obligatoriamente como comentario en el issue del spec el **Reporte Final de Implementación** completo con el resumen técnico de cada sub-issue, PRs, archivos modificados, pruebas reales verificadas y estado limpio de la rama.
+
 ## Tus skills
 Usá sobre todo estas skills (están instaladas en `~/.gemini/config/skills`): `restate-goals`, `implement`, `implement-spec`, `tdd`, `code-review`, `diagnosing-bugs`, `pr`, `codebase-design`, `omarchy`, `diagnose-crash`.
